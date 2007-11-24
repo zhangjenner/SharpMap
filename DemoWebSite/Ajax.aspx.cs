@@ -9,6 +9,10 @@ using System.Web.UI.WebControls;
 using System.Web.UI.WebControls.WebParts;
 using System.Web.UI.HtmlControls;
 
+using GeoAPI.Geometries;
+using SharpMap.Converters.Geometries;
+
+
 public partial class Ajax : System.Web.UI.Page
 {
 	protected void Page_Load(object sender, EventArgs e)
@@ -17,7 +21,7 @@ public partial class Ajax : System.Web.UI.Page
 		if (!Page.IsPostBack && !Page.IsCallback)
 		{
 			//Set up the map. We use the method in the App_Code folder for initializing the map
-			ajaxMap.Map.Center = new SharpMap.Geometries.Point(0, 20);
+			ajaxMap.Map.Center = GeometryFactory.CreateCoordinate(0, 20);
 			ajaxMap.FadeSpeed = 10;
 			ajaxMap.ZoomSpeed = 10;
 			ajaxMap.Map.Zoom = 360;

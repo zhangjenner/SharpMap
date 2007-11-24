@@ -283,7 +283,7 @@ namespace SharpMap.Web.UI.Ajax
 			try
 			{
 				map.Zoom = double.Parse(vals[2], numberFormat_EnUS);
-				map.Center = new SharpMap.Geometries.Point(double.Parse(vals[0], numberFormat_EnUS), double.Parse(vals[1], numberFormat_EnUS));
+				map.Center = SharpMap.Converters.Geometries.GeometryFactory.CreateCoordinate(double.Parse(vals[0], numberFormat_EnUS), double.Parse(vals[1], numberFormat_EnUS));
 				map.Size= new System.Drawing.Size(int.Parse(vals[3]), int.Parse(vals[4]));
 				return GenerateMap();
 				//If you want to use the Cache for storing the map, instead of a maphandler,
@@ -365,7 +365,7 @@ namespace SharpMap.Web.UI.Ajax
 				(_DisplayStatusBar ? _StatusBarText : "") + "','"+this.UniqueID+"');" + newline;
 			setvarsScript +=
 				obj + ".zoom = " + map.Zoom.ToString(numberFormat_EnUS) + ";" + newline +
-				obj + ".minX = " + map.Envelope.Left.ToString(numberFormat_EnUS) + ";" + newline +
+				obj + ".minX = " + map.Envelope.MinX.ToString(numberFormat_EnUS) + ";" + newline +
 				obj + ".maxY = " + map.Center.Y.ToString(numberFormat_EnUS) + "+" + obj + ".zoom/" + obj + ".container.offsetWidth*" + obj + ".container.offsetHeight*0.5;" + newline +
 				obj + ".minZoom = " + map.MinimumZoom.ToString(numberFormat_EnUS) + ";" + newline +
 				obj + ".maxZoom = " + map.MaximumZoom.ToString(numberFormat_EnUS) + ";" + newline +

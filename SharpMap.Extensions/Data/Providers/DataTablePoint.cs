@@ -20,7 +20,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Data;
 using System.Collections.ObjectModel;
-using SharpMap.Geometries;
+using GeoAPI.Geometries;
 
 namespace SharpMap.Data.Providers
 {
@@ -123,26 +123,26 @@ namespace SharpMap.Data.Providers
         /// </summary>
         /// <param name="bbox"></param>
         /// <returns></returns>
-        public Collection<Geometry> GetGeometriesInView(BoundingBox bbox)
+        public Collection<IGeometry> GetGeometriesInView(IEnvelope bbox)
         {
             DataRow[] drow;
-            Collection<Geometry> features = new Collection<Geometry>();
+            Collection<IGeometry> features = new Collection<IGeometry>();
 
             if (Table.Rows.Count == 0)
             {
                 return null;
             }
 
-            string strSQL = XColumn + " > " + bbox.Left.ToString(Map.numberFormat_EnUS) + " AND " +
-                XColumn + " < " + bbox.Right.ToString(Map.numberFormat_EnUS) + " AND " +
-                YColumn + " > " + bbox.Bottom.ToString(Map.numberFormat_EnUS) + " AND " +
-                YColumn + " < " + bbox.Top.ToString(Map.numberFormat_EnUS);
+            string strSQL = XColumn + " > " + bbox.MinX.ToString(Map.numberFormat_EnUS) + " AND " +
+                XColumn + " < " + bbox.MaxX.ToString(Map.numberFormat_EnUS) + " AND " +
+                YColumn + " > " + bbox.MinY.ToString(Map.numberFormat_EnUS) + " AND " +
+                YColumn + " < " + bbox.MaxY.ToString(Map.numberFormat_EnUS);
             
             drow = Table.Select(strSQL);
 
             foreach (DataRow dr in drow)
             {
-                features.Add(new Point((double)dr[2], (double)dr[1]));
+                features.Add(SharpMap.Converters.Geometries.GeometryFactory.CreatePoint((double)dr[2], (double)dr[1]));
             }
 
             return features;
@@ -153,7 +153,7 @@ namespace SharpMap.Data.Providers
         /// </summary>
         /// <param name="bbox"></param>
         /// <returns></returns>
-        public Collection<uint> GetObjectIDsInView(BoundingBox bbox)
+        public Collection<uint> GetObjectIDsInView(IEnvelope bbox)
         {
             DataRow[] drow;
             Collection<uint> objectlist = new Collection<uint>();
@@ -163,10 +163,10 @@ namespace SharpMap.Data.Providers
                 return null;
             }
 
-            string strSQL = XColumn + " > " + bbox.Left.ToString(Map.numberFormat_EnUS) + " AND " +
-                XColumn + " < " + bbox.Right.ToString(Map.numberFormat_EnUS) + " AND " +
-                YColumn + " > " + bbox.Bottom.ToString(Map.numberFormat_EnUS) + " AND " +
-                YColumn + " < " + bbox.Top.ToString(Map.numberFormat_EnUS);
+            string strSQL = XColumn + " > " + bbox.MinX.ToString(Map.numberFormat_EnUS) + " AND " +
+                XColumn + " < " + bbox.MaxX.ToString(Map.numberFormat_EnUS) + " AND " +
+                YColumn + " > " + bbox.MinY.ToString(Map.numberFormat_EnUS) + " AND " +
+                YColumn + " < " + bbox.MaxY.ToString(Map.numberFormat_EnUS);
 
             drow = Table.Select(strSQL);
 
@@ -183,10 +183,10 @@ namespace SharpMap.Data.Providers
         /// </summary>
         /// <param name="oid">Object ID</param>
         /// <returns>geometry</returns>
-        public Geometry GetGeometryByID(uint oid)
+        public IGeometry GetGeometryByID(uint oid)
         {
             DataRow[] rows;
-            Geometry geom = null;
+            IGeometry geom = null;
 
             if (Table.Rows.Count == 0)
             {
@@ -199,7 +199,7 @@ namespace SharpMap.Data.Providers
 
             foreach (DataRow dr in rows)
             {
-                geom = new Point((double)dr[XColumn], (double)dr[YColumn]);
+                geom = SharpMap.Converters.Geometries.GeometryFactory.CreatePoint((double)dr[XColumn], (double)dr[YColumn]);
             }
 
             return geom;
@@ -210,7 +210,7 @@ namespace SharpMap.Data.Providers
         /// </summary>
         /// <param name="geom"></param>
         /// <param name="ds">FeatureDataSet to fill data into</param>
-        public void ExecuteIntersectionQuery(Geometry geom, FeatureDataSet ds)
+        public void ExecuteIntersectionQuery(IGeometry geom, FeatureDataSet ds)
         {
             throw new NotSupportedException("ExecuteIntersectionQuery(Geometry) is not supported by the DataTablePoint.");
             //When relation model has been implemented the following will complete the query
@@ -232,7 +232,7 @@ namespace SharpMap.Data.Providers
         /// </summary>
         /// <param name="bbox">Bounds of the region to search.</param>
         /// <param name="ds">FeatureDataSet to fill data into</param>
-        public void ExecuteIntersectionQuery(BoundingBox bbox, FeatureDataSet ds)
+        public void ExecuteIntersectionQuery(IEnvelope bbox, FeatureDataSet ds)
         {
             DataRow[] rows;
 
@@ -241,10 +241,10 @@ namespace SharpMap.Data.Providers
                 return;
             }
 
-            string statement = XColumn + " > " + bbox.Left.ToString(Map.numberFormat_EnUS) + " AND " +
-                XColumn + " < " + bbox.Right.ToString(Map.numberFormat_EnUS) + " AND " +
-                YColumn + " > " + bbox.Bottom.ToString(Map.numberFormat_EnUS) + " AND " +
-                YColumn + " < " + bbox.Top.ToString(Map.numberFormat_EnUS);
+            string statement = XColumn + " > " + bbox.MinX.ToString(Map.numberFormat_EnUS) + " AND " +
+                XColumn + " < " + bbox.MaxX.ToString(Map.numberFormat_EnUS) + " AND " +
+                YColumn + " > " + bbox.MinY.ToString(Map.numberFormat_EnUS) + " AND " +
+                YColumn + " < " + bbox.MaxY.ToString(Map.numberFormat_EnUS);
 
             rows = Table.Select(statement);
 
@@ -259,7 +259,7 @@ namespace SharpMap.Data.Providers
             {
                 fdt.ImportRow(dr);
                 FeatureDataRow fdr = fdt.Rows[fdt.Rows.Count - 1] as FeatureDataRow;
-                fdr.Geometry = new Point((double)dr[XColumn], (double)dr[YColumn]);
+                fdr.Geometry = SharpMap.Converters.Geometries.GeometryFactory.CreatePoint((double)dr[XColumn], (double)dr[YColumn]);
             }
 
             ds.Tables.Add(fdt);
@@ -303,14 +303,14 @@ namespace SharpMap.Data.Providers
         /// A BoundingBox instance which minimally bounds all the features
         /// available in this data source.
         /// </returns>
-        public BoundingBox GetExtents()
+        public IEnvelope GetExtents()
         {
             if (Table.Rows.Count == 0)
             {
                 return null;
             }
 
-            BoundingBox box;
+            IEnvelope box;
 
             double minX = Double.PositiveInfinity, minY = Double.PositiveInfinity,
                 maxX = Double.NegativeInfinity, maxY = Double.NegativeInfinity;
@@ -323,7 +323,7 @@ namespace SharpMap.Data.Providers
                 if (maxY < (double)dr[YColumn]) maxY = (double)dr[YColumn];
             }
 
-            box = new BoundingBox(minX, minY, maxX, maxY);
+            box = SharpMap.Converters.Geometries.GeometryFactory.CreateEnvelope(minX, minY, maxX, maxY);
             
             return box;
         }

@@ -18,7 +18,6 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using SharpMap.Geometries;
 
 namespace SharpMap.Layers
 {
@@ -52,13 +51,13 @@ namespace SharpMap.Layers
 		}
 
 
-		private SharpMap.CoordinateSystems.Transformations.ICoordinateTransformation _CoordinateTransform;
+        private GeoAPI.CoordinateSystems.Transformations.ICoordinateTransformation _CoordinateTransform;
 
 		/// <summary>
 		/// Gets or sets the <see cref="SharpMap.CoordinateSystems.Transformations.ICoordinateTransformation"/> applied 
 		/// to this vectorlayer prior to rendering
 		/// </summary>
-		public virtual SharpMap.CoordinateSystems.Transformations.ICoordinateTransformation CoordinateTransformation
+        public virtual GeoAPI.CoordinateSystems.Transformations.ICoordinateTransformation CoordinateTransformation
 		{
 			get { return _CoordinateTransform; }
 			set { _CoordinateTransform = value; }
@@ -103,7 +102,7 @@ namespace SharpMap.Layers
 		/// Returns the extent of the layer
 		/// </summary>
 		/// <returns>Bounding box corresponding to the extent of the features in the layer</returns>
-		public abstract SharpMap.Geometries.BoundingBox Envelope { get; }
+		public abstract GeoAPI.Geometries.IEnvelope Envelope { get; }
 
 		#region Properties
 

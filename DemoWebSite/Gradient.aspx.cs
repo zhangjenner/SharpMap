@@ -9,24 +9,26 @@ using System.Web.UI;
 using System.Web.UI.WebControls;
 using System.Web.UI.WebControls.WebParts;
 using System.Web.UI.HtmlControls;
+using GeoAPI.Geometries;
+using SharpMap.Converters.Geometries;
 
 public partial class Gradient : System.Web.UI.Page
 {
 	private double Zoom;
-	private SharpMap.Geometries.Point Center;
+	private ICoordinate Center;
 
 	protected void Page_Load(object sender, EventArgs e)
 	{
 		if (Page.IsPostBack) 
 		{
 			//Page is post back. Restore center and zoom-values from viewstate
-			Center = (SharpMap.Geometries.Point)ViewState["mapCenter"];
+			Center = (ICoordinate)ViewState["mapCenter"];
 			Zoom = (double)ViewState["mapZoom"];
 		}
 		else
 		{
 			//This is the initial view of the map.
-			Center = new SharpMap.Geometries.Point(12,48);
+            Center = GeometryFactory.CreateCoordinate(12, 48);
 			Zoom = 45;
 			//Create the map
 			GenerateMap();

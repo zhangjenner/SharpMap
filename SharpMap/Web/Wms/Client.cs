@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Text;
 using System.Xml;
+using GeoAPI.Geometries;
 
 namespace SharpMap.Web.Wms
 {
@@ -56,7 +57,7 @@ namespace SharpMap.Web.Wms
 			/// <summary>
 			/// Latitudal/longitudal extent of this layer
 			/// </summary>
-			public SharpMap.Geometries.BoundingBox LatLonBoundingBox;
+			public IEnvelope LatLonBoundingBox;
 		}
 
 		/// <summary>
@@ -480,7 +481,7 @@ namespace SharpMap.Web.Wms
 					!double.TryParse(node.Attributes["maxx"].Value, System.Globalization.NumberStyles.Any, SharpMap.Map.numberFormat_EnUS, out maxx) &
 					!double.TryParse(node.Attributes["maxy"].Value, System.Globalization.NumberStyles.Any, SharpMap.Map.numberFormat_EnUS, out maxy))
 					throw new ArgumentException("Invalid LatLonBoundingBox on layer '" + layer.Name + "'");
-				layer.LatLonBoundingBox = new SharpMap.Geometries.BoundingBox(minx, miny, maxx, maxy);
+                layer.LatLonBoundingBox = SharpMap.Converters.Geometries.GeometryFactory.CreateEnvelope(minx, maxx, miny, maxy);
 			}
 			return layer;
 		}

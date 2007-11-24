@@ -18,6 +18,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using GeoAPI.Geometries;
 
 namespace SharpMap.Web.Wms
 {
@@ -191,14 +192,14 @@ namespace SharpMap.Web.Wms
 				}
 				map.Size = new System.Drawing.Size(width, height);
 
-				SharpMap.Geometries.BoundingBox bbox = ParseBBOX(context.Request.Params["bbox"]);
+				IEnvelope bbox = ParseBBOX(context.Request.Params["bbox"]);
 				if (bbox == null)
 				{
 					WmsException.ThrowWmsException("Invalid parameter BBOX");
 					return;
 				}
 				map.PixelAspectRatio = ((double)width / (double)height) / (bbox.Width / bbox.Height);
-				map.Center = bbox.GetCentroid();
+				map.Center = bbox.Centre;
 				map.Zoom = bbox.Width;
 
 				//Set layers on/off
@@ -274,7 +275,7 @@ namespace SharpMap.Web.Wms
 		/// </summary>
 		/// <param name="strBBOX">string representation of a boundingbox</param>
 		/// <returns>Boundingbox or null if invalid parameter</returns>
-		private static SharpMap.Geometries.BoundingBox ParseBBOX(string strBBOX)
+		private static IEnvelope ParseBBOX(string strBBOX)
 		{
 			string[] strVals = strBBOX.Split(new char[] {','});
 			if(strVals.Length!=4)
@@ -295,7 +296,7 @@ namespace SharpMap.Web.Wms
 			if (maxy < miny)
 				return null;
 
-			return new SharpMap.Geometries.BoundingBox(minx, miny, maxx, maxy);
+			return SharpMap.Converters.Geometries.GeometryFactory.CreateEnvelope(minx, miny, maxx, maxy);
 		}
 	}
 }

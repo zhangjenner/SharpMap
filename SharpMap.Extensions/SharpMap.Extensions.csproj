@@ -41,15 +41,15 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\ExternalReferences\References4SharpMap.Extensions\gdal_csharp.dll</HintPath>
     </Reference>
-    <Reference Include="GeoAPI, Version=1.0.0.0, Culture=neutral, PublicKeyToken=a1a0da7def465678, processorArchitecture=MSIL">
+    <Reference Include="GeoAPI, Version=1.1.0.0, Culture=neutral, PublicKeyToken=a1a0da7def465678, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\ExternalReferences\References4SharpMap.Extensions\GeoAPI.dll</HintPath>
+      <HintPath>..\ExternalReferences\GeoAPI.dll</HintPath>
     </Reference>
     <Reference Include="Mono.Security, Version=2.0.0.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\ExternalReferences\References4SharpMap.Extensions\Mono.Security.dll</HintPath>
     </Reference>
-    <Reference Include="NetTopologySuite, Version=1.7.1.29911, Culture=neutral, PublicKeyToken=f580a05016ebada1, processorArchitecture=MSIL">
+    <Reference Include="NetTopologySuite, Version=1.7.3.16791, Culture=neutral, PublicKeyToken=f580a05016ebada1, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\ExternalReferences\NetTopologySuite.dll</HintPath>
     </Reference>
@@ -84,8 +84,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Data\Providers\DataTablePoint.cs" />
-    <Compile Include="Data\Providers\NtsGeometryConverter.cs" />
-    <Compile Include="Data\Providers\NtsProvider.cs" />
     <Compile Include="Data\Providers\OgrProvider.cs" />
     <Compile Include="Data\Providers\Oracle.cs" />
     <Compile Include="Data\Providers\PostGIS.cs" />

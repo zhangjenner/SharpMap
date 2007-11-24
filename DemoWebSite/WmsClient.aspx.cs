@@ -10,22 +10,26 @@ using System.Web.UI.WebControls;
 using System.Web.UI.WebControls.WebParts;
 using System.Web.UI.HtmlControls;
 
+using GeoAPI.Geometries;
+using SharpMap.Converters.Geometries;
+
+
 public partial class WmsClient : System.Web.UI.Page
 {
 	private double Zoom;
-	private SharpMap.Geometries.Point Center;
+	private ICoordinate Center;
 
 	protected void Page_Load(object sender, EventArgs e)
 	{
 		if (Page.IsPostBack) 
 		{
 			//Page is post back. Restore center and zoom-values from viewstate
-			Center = (SharpMap.Geometries.Point)ViewState["mapCenter"];
+			Center = (ICoordinate)ViewState["mapCenter"];
 			Zoom = (double)ViewState["mapZoom"];
 		}
 		else
 		{
-			Center = new SharpMap.Geometries.Point(0,0);
+			Center = GeometryFactory.CreateCoordinate(0,0);
 			Zoom = 360;
 			//Create the map
 			GenerateMap();
@@ -39,8 +43,12 @@ public partial class WmsClient : System.Web.UI.Page
 		SharpMap.Layers.WmsLayer layWms = MapHelper.GetWmsLayer();
 		//Get request url for WMS
 		hlWmsImage.NavigateUrl = layWms.GetRequestUrl(
-			new SharpMap.Geometries.BoundingBox(Center.X - Zoom * 0.5, Center.Y - Zoom * 0.25,
-			Center.X + Zoom * 0.5, Center.Y + Zoom * 0.25), new Size((int)imgMap.Width.Value, (int)imgMap.Height.Value));
+			GeometryFactory.CreateEnvelope(
+                    Center.X - Zoom * 0.5, 
+    		        Center.X + Zoom * 0.5,
+                    Center.Y - Zoom * 0.25,
+                    Center.Y + Zoom * 0.25), 
+                    new Size((int)imgMap.Width.Value, (int)imgMap.Height.Value));
 
 		litLayers.Text = "<p><b>WMS Title</b>: " + layWms.ServiceDescription.Title + "<br/>Abstract: <i>"+layWms.ServiceDescription.Abstract + "</i>";
 		litLayers.Text += "<br/><b>WMS Layers:</b><br/>";

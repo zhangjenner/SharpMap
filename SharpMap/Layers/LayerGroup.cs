@@ -85,15 +85,15 @@ namespace SharpMap.Layers
 		/// Returns the extent of the layer
 		/// </summary>
 		/// <returns>Bounding box corresponding to the extent of the features in the layer</returns>
-		public override SharpMap.Geometries.BoundingBox Envelope
+		public override GeoAPI.Geometries.IEnvelope Envelope
 		{
 			get
 			{
 				if (this.Layers.Count == 0)
 					return null;
-				SharpMap.Geometries.BoundingBox bbox = this.Layers[0].Envelope;
+				GeoAPI.Geometries.IEnvelope bbox = this.Layers[0].Envelope;
 				for (int i = 1; i < this.Layers.Count; i++)
-					bbox = bbox.Join(this.Layers[i].Envelope);
+					bbox.ExpandToInclude(this.Layers[i].Envelope);
 				return bbox;
 			}
 		}

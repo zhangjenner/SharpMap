@@ -23,11 +23,11 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("SharpMap Engine")]
-[assembly: AssemblyDescription("SharpMap v0.9")]
+[assembly: AssemblyDescription("SharpMap v0.9.5")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("iter.dk")]
+[assembly: AssemblyCompany("http://www.codeplex.com/SharpMap")]
 [assembly: AssemblyProduct("SharpMap Engine")]
-[assembly: AssemblyCopyright("Copyright © 2006 Morten Nielsen")]
+[assembly: AssemblyCopyright("Copyright © 2007 Morten Nielsen")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -49,4 +49,4 @@ using System.Runtime.InteropServices;
 // You can specify all the values or you can default the Revision and Build Numbers 
 // by using the '*' as shown below:
 [assembly: AssemblyVersion("0.9.*")]
-[assembly: AssemblyFileVersion("0.9.0.0")]
+[assembly: AssemblyFileVersion("0.9.5.0")]

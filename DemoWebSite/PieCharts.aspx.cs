@@ -11,6 +11,9 @@ using System.Web.UI.WebControls.WebParts;
 using System.Web.UI.HtmlControls;
 using SharpMap.Rendering.Thematics;
 
+using GeoAPI.Geometries;
+using SharpMap.Converters.Geometries;
+
 public partial class Bins : System.Web.UI.Page
 {
 	private SharpMap.Map myMap;
@@ -36,14 +39,14 @@ public partial class Bins : System.Web.UI.Page
 		if (Page.IsPostBack) 
 		{
 			//Page is post back. Restore center and zoom-values from viewstate
-			myMap.Center = (SharpMap.Geometries.Point)ViewState["mapCenter"];
+			myMap.Center = (ICoordinate)ViewState["mapCenter"];
 			myMap.Zoom = (double)ViewState["mapZoom"];
 		}
 		else
 		{
 			//This is the initial view of the map. Zoom to the extents of the map:
 			//myMap.ZoomToExtents();
-			myMap.Center = new SharpMap.Geometries.Point(10,50);
+			myMap.Center = GeometryFactory.CreateCoordinate(10,50);
 			myMap.Zoom = 60;
 			//Create the map
 			GenerateMap();
@@ -79,7 +82,9 @@ public partial class Bins : System.Web.UI.Page
 	{
 
 		// Replace polygon with a center point (this is where we place the symbol
-		row.Geometry = row.Geometry.GetBoundingBox().GetCentroid();
+        row.Geometry = GeometryFactory.CreatePoint(
+                                    row.Geometry.EnvelopeInternal.Centre.X,
+                                    row.Geometry.EnvelopeInternal.Centre.Y);
 
 		// Just for the example I use random values 
 		int size = rand.Next(20, 35);

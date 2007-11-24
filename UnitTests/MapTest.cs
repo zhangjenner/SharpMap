@@ -5,6 +5,13 @@ using System.Text;
 
 using NUnit.Framework;
 
+
+using GeoAPI.Geometries;
+using SharpMap.Converters.Geometries;
+using SharpMap.Converters.WellKnownBinary;
+using SharpMap.Converters.WellKnownText;
+
+
 namespace UnitTests
 {
 	[TestFixture]
@@ -21,7 +28,7 @@ namespace UnitTests
 			Assert.AreEqual(System.Drawing.Color.Transparent, map.BackColor);
 			Assert.AreEqual(double.MaxValue, map.MaximumZoom);
 			Assert.AreEqual(0, map.MinimumZoom);
-			Assert.AreEqual(new SharpMap.Geometries.Point(0, 0), map.Center, "map.Center should be initialized to (0,0)");
+			Assert.AreEqual(GeometryFactory.CreateCoordinate(0, 0), map.Center, "map.Center should be initialized to (0,0)");
 			Assert.AreEqual(1, map.Zoom, "Map zoom should be initialized to 1.0");
 		}
 
@@ -30,24 +37,24 @@ namespace UnitTests
 		{
 			SharpMap.Map map = new SharpMap.Map(new System.Drawing.Size(1000, 500));
 			map.Zoom = 360;
-			map.Center = new SharpMap.Geometries.Point(0, 0);
-			Assert.AreEqual(new SharpMap.Geometries.Point(0, 0), map.ImageToWorld(new System.Drawing.PointF(500, 250)));
-			Assert.AreEqual(new SharpMap.Geometries.Point(-180, 90), map.ImageToWorld(new System.Drawing.PointF(0,0)));
-			Assert.AreEqual(new SharpMap.Geometries.Point(-180, -90), map.ImageToWorld(new System.Drawing.PointF(0, 500)));
-			Assert.AreEqual(new SharpMap.Geometries.Point(180, 90), map.ImageToWorld(new System.Drawing.PointF(1000, 0)));
-			Assert.AreEqual(new SharpMap.Geometries.Point(180, -90), map.ImageToWorld(new System.Drawing.PointF(1000, 500)));
+			map.Center = GeometryFactory.CreateCoordinate(0, 0);
+			Assert.AreEqual(GeometryFactory.CreateCoordinate(0, 0), map.ImageToWorld(new System.Drawing.PointF(500, 250)));
+			Assert.AreEqual(GeometryFactory.CreateCoordinate(-180, 90), map.ImageToWorld(new System.Drawing.PointF(0,0)));
+			Assert.AreEqual(GeometryFactory.CreateCoordinate(-180, -90), map.ImageToWorld(new System.Drawing.PointF(0, 500)));
+			Assert.AreEqual(GeometryFactory.CreateCoordinate(180, 90), map.ImageToWorld(new System.Drawing.PointF(1000, 0)));
+			Assert.AreEqual(GeometryFactory.CreateCoordinate(180, -90), map.ImageToWorld(new System.Drawing.PointF(1000, 500)));
 		}
 		[Test]
 		public void WorldToImage()
 		{
 			SharpMap.Map map = new SharpMap.Map(new System.Drawing.Size(1000, 500));
 			map.Zoom = 360;
-			map.Center = new SharpMap.Geometries.Point(0, 0);
-			Assert.AreEqual(new System.Drawing.PointF(500, 250), map.WorldToImage(new SharpMap.Geometries.Point(0, 0)));
-			Assert.AreEqual(new System.Drawing.PointF(0, 0), map.WorldToImage(new SharpMap.Geometries.Point(-180, 90)));
-			Assert.AreEqual(new System.Drawing.PointF(0, 500), map.WorldToImage(new SharpMap.Geometries.Point(-180, -90)));
-			Assert.AreEqual(new System.Drawing.PointF(1000, 0), map.WorldToImage(new SharpMap.Geometries.Point(180, 90)));
-			Assert.AreEqual(new System.Drawing.PointF(1000, 500), map.WorldToImage(new SharpMap.Geometries.Point(180, -90)));
+			map.Center = GeometryFactory.CreateCoordinate(0, 0);
+			Assert.AreEqual(new System.Drawing.PointF(500, 250), map.WorldToImage(GeometryFactory.CreateCoordinate(0, 0)));
+			Assert.AreEqual(new System.Drawing.PointF(0, 0), map.WorldToImage(GeometryFactory.CreateCoordinate(-180, 90)));
+			Assert.AreEqual(new System.Drawing.PointF(0, 500), map.WorldToImage(GeometryFactory.CreateCoordinate(-180, -90)));
+			Assert.AreEqual(new System.Drawing.PointF(1000, 0), map.WorldToImage(GeometryFactory.CreateCoordinate(180, 90)));
+			Assert.AreEqual(new System.Drawing.PointF(1000, 500), map.WorldToImage(GeometryFactory.CreateCoordinate(180, -90)));
 		}
 		[Test]
 		[ExpectedException(typeof(InvalidOperationException))]
@@ -114,8 +121,8 @@ namespace UnitTests
 			SharpMap.Map map = new SharpMap.Map(new System.Drawing.Size(400, 200));
 			SharpMap.Layers.VectorLayer vLayer = new SharpMap.Layers.VectorLayer("Geom layer", CreateDatasource());
 			map.Layers.Add(vLayer);
-			SharpMap.Geometries.BoundingBox box = map.GetExtents();
-			Assert.AreEqual(new SharpMap.Geometries.BoundingBox(0, 0, 50, 346.3493254), box);
+			IEnvelope box = map.GetExtents();
+			Assert.AreEqual(GeometryFactory.CreateEnvelope(0, 0, 50, 346.3493254), box);
 		}
 		[Test]
 		public void GetPixelSize_FixedZoom_Return8_75()
@@ -181,16 +188,16 @@ namespace UnitTests
 		public void ZoomToBox_NoAspectCorrection()
 		{
 			SharpMap.Map map = new SharpMap.Map(new System.Drawing.Size(400,200));
-			map.ZoomToBox(new SharpMap.Geometries.BoundingBox(20, 50, 100, 80));
-			Assert.AreEqual(new SharpMap.Geometries.Point(60,65), map.Center);
+			map.ZoomToBox(GeometryFactory.CreateEnvelope(20, 50, 100, 80));
+			Assert.AreEqual(GeometryFactory.CreateCoordinate(60,65), map.Center);
 			Assert.AreEqual(80, map.Zoom);
 		}
 		[Test]
 		public void ZoomToBox_WithAspectCorrection()
 		{
 			SharpMap.Map map = new SharpMap.Map(new System.Drawing.Size(400, 200));
-			map.ZoomToBox(new SharpMap.Geometries.BoundingBox(20, 10, 100, 180));
-			Assert.AreEqual(new SharpMap.Geometries.Point(60, 95), map.Center);
+			map.ZoomToBox(GeometryFactory.CreateEnvelope(20, 10, 100, 180));
+			Assert.AreEqual(GeometryFactory.CreateCoordinate(60, 95), map.Center);
 			Assert.AreEqual(340, map.Zoom);
 		}
 
@@ -207,19 +214,19 @@ namespace UnitTests
 		public void WorldToMap_DefaultMap_ReturnValue()
 		{
 			SharpMap.Map map = new SharpMap.Map(new System.Drawing.Size(500,200));
-			map.Center = new SharpMap.Geometries.Point(23, 34);
+			map.Center = GeometryFactory.CreateCoordinate(23, 34);
 			map.Zoom = 1000;
-			System.Drawing.PointF p = map.WorldToImage(new SharpMap.Geometries.Point(8, 50));
+			System.Drawing.PointF p = map.WorldToImage(GeometryFactory.CreateCoordinate(8, 50));
 			Assert.AreEqual(new System.Drawing.PointF(242.5f, 92), p);
 		}
 		[Test]
 		public void ImageToWorld_DefaultMap_ReturnValue()
 		{
 			SharpMap.Map map = new SharpMap.Map(new System.Drawing.Size(500, 200));
-			map.Center = new SharpMap.Geometries.Point(23, 34);
+			map.Center = GeometryFactory.CreateCoordinate(23, 34);
 			map.Zoom = 1000;
-			SharpMap.Geometries.Point p = map.ImageToWorld(new System.Drawing.PointF(242.5f, 92));
-			Assert.AreEqual(new SharpMap.Geometries.Point(8, 50), p);
+			ICoordinate p = map.ImageToWorld(new System.Drawing.PointF(242.5f, 92));
+			Assert.AreEqual(GeometryFactory.CreateCoordinate(8, 50), p);
 		}
 
 		[Test]
@@ -260,19 +267,19 @@ namespace UnitTests
 
 		private SharpMap.Data.Providers.IProvider CreateDatasource()
 		{
-			Collection<SharpMap.Geometries.Geometry> geoms = new Collection<SharpMap.Geometries.Geometry>();
-			geoms.Add(SharpMap.Geometries.Geometry.GeomFromText("POINT EMPTY"));
-			geoms.Add(SharpMap.Geometries.Geometry.GeomFromText("GEOMETRYCOLLECTION (POINT (10 10), POINT (30 30), LINESTRING (15 15, 20 20))"));
-			geoms.Add(SharpMap.Geometries.Geometry.GeomFromText("MULTIPOLYGON (((0 0, 10 0, 10 10, 0 10, 0 0)), ((5 5, 7 5, 7 7, 5 7, 5 5)))"));
-			geoms.Add(SharpMap.Geometries.Geometry.GeomFromText("LINESTRING (20 20, 20 30, 30 30, 30 20, 40 20)"));
-			geoms.Add(SharpMap.Geometries.Geometry.GeomFromText("MULTILINESTRING ((10 10, 40 50), (20 20, 30 20), (20 20, 50 20, 50 60, 20 20))"));
-			geoms.Add(SharpMap.Geometries.Geometry.GeomFromText("POLYGON ((20 20, 20 30, 30 30, 30 20, 20 20), (21 21, 29 21, 29 29, 21 29, 21 21), (23 23, 23 27, 27 27, 27 23, 23 23))"));
-			geoms.Add(SharpMap.Geometries.Geometry.GeomFromText("POINT (20.564 346.3493254)"));
-			geoms.Add(SharpMap.Geometries.Geometry.GeomFromText("MULTIPOINT (20.564 346.3493254, 45 32, 23 54)"));
-			geoms.Add(SharpMap.Geometries.Geometry.GeomFromText("MULTIPOLYGON EMPTY"));
-			geoms.Add(SharpMap.Geometries.Geometry.GeomFromText("MULTILINESTRING EMPTY"));
-			geoms.Add(SharpMap.Geometries.Geometry.GeomFromText("MULTIPOINT EMPTY"));
-			geoms.Add(SharpMap.Geometries.Geometry.GeomFromText("LINESTRING EMPTY"));
+			Collection<IGeometry> geoms = new Collection<IGeometry>();
+			geoms.Add(GeometryFromWKT.Parse("POINT EMPTY"));
+			geoms.Add(GeometryFromWKT.Parse("GEOMETRYCOLLECTION (POINT (10 10), POINT (30 30), LINESTRING (15 15, 20 20))"));
+			geoms.Add(GeometryFromWKT.Parse("MULTIPOLYGON (((0 0, 10 0, 10 10, 0 10, 0 0)), ((5 5, 7 5, 7 7, 5 7, 5 5)))"));
+			geoms.Add(GeometryFromWKT.Parse("LINESTRING (20 20, 20 30, 30 30, 30 20, 40 20)"));
+			geoms.Add(GeometryFromWKT.Parse("MULTILINESTRING ((10 10, 40 50), (20 20, 30 20), (20 20, 50 20, 50 60, 20 20))"));
+			geoms.Add(GeometryFromWKT.Parse("POLYGON ((20 20, 20 30, 30 30, 30 20, 20 20), (21 21, 29 21, 29 29, 21 29, 21 21), (23 23, 23 27, 27 27, 27 23, 23 23))"));
+			geoms.Add(GeometryFromWKT.Parse("POINT (20.564 346.3493254)"));
+			geoms.Add(GeometryFromWKT.Parse("MULTIPOINT (20.564 346.3493254, 45 32, 23 54)"));
+			geoms.Add(GeometryFromWKT.Parse("MULTIPOLYGON EMPTY"));
+			geoms.Add(GeometryFromWKT.Parse("MULTILINESTRING EMPTY"));
+			geoms.Add(GeometryFromWKT.Parse("MULTIPOINT EMPTY"));
+			geoms.Add(GeometryFromWKT.Parse("LINESTRING EMPTY"));
 			return new SharpMap.Data.Providers.GeometryProvider(geoms);
 		}
 	}

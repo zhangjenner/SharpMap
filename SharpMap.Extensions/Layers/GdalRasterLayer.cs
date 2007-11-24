@@ -1,6 +1,8 @@
 using System;
 using System.Drawing;
 using System.Drawing.Imaging;
+using GeoAPI.Geometries;
+
 
 namespace SharpMap.Layers
 {
@@ -20,7 +22,7 @@ namespace SharpMap.Layers
 
     public class GdalRasterLayer : SharpMap.Layers.Layer, IDisposable
     {
-        private SharpMap.Geometries.BoundingBox _Envelope;
+        private IEnvelope _Envelope;
         private OSGeo.GDAL.Dataset _GdalDataset;
         private System.Drawing.Size imagesize;
 
@@ -98,7 +100,7 @@ namespace SharpMap.Layers
         /// </summary>
         /// <returns>Bounding box corresponding to the extent of the features in the layer</returns>
 
-        public override SharpMap.Geometries.BoundingBox Envelope
+        public override IEnvelope Envelope
         {
             get { return _Envelope; }
         }
@@ -167,7 +169,7 @@ namespace SharpMap.Layers
 
         #endregion
 
-        private SharpMap.Geometries.BoundingBox GetExtent()
+        private IEnvelope GetExtent()
         {
             if (_GdalDataset != null)
             {
@@ -175,7 +177,7 @@ namespace SharpMap.Layers
                 _GdalDataset.GetGeoTransform(geoTrans);
                 GeoTransform GT = new GeoTransform(geoTrans);
 
-                return new SharpMap.Geometries.BoundingBox(GT.Left,
+                return SharpMap.Converters.Geometries.GeometryFactory.CreateEnvelope(GT.Left,
                                                             GT.Top + (GT.VerticalPixelResolution * _GdalDataset.RasterYSize),
                                                             GT.Left + (GT.HorizontalPixelResolution * _GdalDataset.RasterXSize),
                                                             GT.Top);
@@ -184,7 +186,7 @@ namespace SharpMap.Layers
             return null;
         }
 
-        private void GetPreview(OSGeo.GDAL.Dataset dataset, System.Drawing.Size size, Graphics g, SharpMap.Geometries.BoundingBox bbox)
+        private void GetPreview(OSGeo.GDAL.Dataset dataset, System.Drawing.Size size, Graphics g, IEnvelope bbox)
         {
             double[] geoTrans = new double[6];
             dataset.GetGeoTransform(geoTrans);
@@ -206,10 +208,10 @@ namespace SharpMap.Layers
                 */
 
 
-                double left = Math.Max(bbox.Left, _Envelope.Left);
-                double top = Math.Min(bbox.Top, _Envelope.Top);
-                double right = Math.Min(bbox.Right, _Envelope.Right);
-                double bottom = Math.Max(bbox.Bottom, _Envelope.Bottom);
+                double left = Math.Max(bbox.MinX, _Envelope.MinX);
+                double top = Math.Min(bbox.MaxY, _Envelope.MaxY);
+                double right = Math.Min(bbox.MaxX, _Envelope.MaxX);
+                double bottom = Math.Max(bbox.MinY, _Envelope.MinY);
 
 
                 int x1 = (int)GT.PixelX(left);
@@ -299,7 +301,7 @@ namespace SharpMap.Layers
         /// </remarks>
         public class GdalRasterLayer : SharpMap.Layers.Layer, IDisposable
         {
-            private SharpMap.Geometries.BoundingBox _Envelope;
+            private IEnvelope _Envelope;
             private GDAL.Dataset _GdalDataset;
             private System.Drawing.Size imagesize;
             private int BitDepth = 8;
@@ -417,7 +419,7 @@ namespace SharpMap.Layers
             /// </summary>
             /// <returns>Bounding box corresponding to the extent of the features in the layer</returns>
 
-            public override SharpMap.Geometries.BoundingBox Envelope
+            public override IEnvelope Envelope
             {
                 get { return _Envelope; }
             }
@@ -475,7 +477,7 @@ namespace SharpMap.Layers
 
             #endregion
 
-            private SharpMap.Geometries.BoundingBox GetExtent()
+            private IEnvelope GetExtent()
             {
                 if(_GdalDataset!=null)
                 {
@@ -483,7 +485,7 @@ namespace SharpMap.Layers
                     _GdalDataset.GetGeoTransform(geoTrans);        	
                     GeoTransform GT = new GeoTransform(geoTrans);
 
-                    return new SharpMap.Geometries.BoundingBox( GT.Left,
+                    return new IEnvelope( GT.Left,
                                                                 GT.Top + (GT.VerticalPixelResolution * _GdalDataset.RasterYSize),
                                                                 GT.Left + (GT.HorizontalPixelResolution * _GdalDataset.RasterXSize),
                                                                 GT.Top);
@@ -492,7 +494,7 @@ namespace SharpMap.Layers
                 return null;
             }
 
-            private void Get8BitPreview(GDAL.Dataset dataset, System.Drawing.Size size, System.Drawing.Graphics g, SharpMap.Geometries.BoundingBox bbox)
+            private void Get8BitPreview(GDAL.Dataset dataset, System.Drawing.Size size, System.Drawing.Graphics g, IEnvelope bbox)
             {
                 double [] geoTrans = new double[6];        	
                 dataset.GetGeoTransform(geoTrans);
@@ -509,14 +511,14 @@ namespace SharpMap.Layers
                 if (dataset != null)
                 {
                     //check if image is in bounding box
-                    if ((bbox.Left > _Envelope.Right) || (bbox.Right < _Envelope.Left)
-                        || (bbox.Top < _Envelope.Bottom) || (bbox.Bottom > _Envelope.Top))
+                    if ((bbox.MinX > _Envelope.Right) || (bbox.MaxX < _Envelope.Left)
+                        || (bbox.MaxY < _Envelope.Bottom) || (bbox.MinY > _Envelope.Top))
                         return;
 
-                    double left = Math.Max(bbox.Left, _Envelope.Left);
-                    double top = Math.Min(bbox.Top, _Envelope.Top);
-                    double right = Math.Min(bbox.Right, _Envelope.Right);
-                    double bottom = Math.Max(bbox.Bottom, _Envelope.Bottom);
+                    double left = Math.Max(bbox.MinX, _Envelope.Left);
+                    double top = Math.Min(bbox.MaxY, _Envelope.Top);
+                    double right = Math.Min(bbox.MaxX, _Envelope.Right);
+                    double bottom = Math.Max(bbox.MinY, _Envelope.Bottom);
 
                     int x1 = (int)Math.Round(GT.PixelX(left));
                     int y1 = (int)Math.Round(GT.PixelY(top));
@@ -524,12 +526,12 @@ namespace SharpMap.Layers
                     int imgPixHeight = (int)Math.Round(GT.PixelYwidth(bottom - top));
                 
                     //get screen pixels image should fill 
-                    double dblBBoxW = bbox.Right - bbox.Left;
+                    double dblBBoxW = bbox.MaxX - bbox.MinX;
                     double dblBBoxtoImgPixX = (double)imgPixWidth / (double)dblBBoxW;
                     intImginMapW = (int)Math.Round(size.Width * dblBBoxtoImgPixX * GT.HorizontalPixelResolution);
                 
 
-                    double dblBBoxH = bbox.Top - bbox.Bottom;
+                    double dblBBoxH = bbox.MaxY - bbox.MinY;
                     double dblBBoxtoImgPixY = (double)imgPixHeight / (double)dblBBoxH;
                     intImginMapH = (int)Math.Round(size.Height * dblBBoxtoImgPixY * -GT.VerticalPixelResolution);
 
@@ -541,17 +543,17 @@ namespace SharpMap.Layers
                     double dblBBoxtoImgY = size.Height / dblBBoxH;
                 
                     // set where to display bitmap in Map
-                    if (bbox.Left != left)
+                    if (bbox.MinX != left)
                     {
-                        if (bbox.Right != right)
-                            intLocX = (int)Math.Round((_Envelope.Left - bbox.Left) * dblBBoxtoImgX);
+                        if (bbox.MaxX != right)
+                            intLocX = (int)Math.Round((_Envelope.Left - bbox.MinX) * dblBBoxtoImgX);
                         else
                             intLocX = size.Width - intImginMapW;
                     }
-                    if (bbox.Top != top)
+                    if (bbox.MaxY != top)
                     {
-                        if (bbox.Bottom != bottom)
-                            intLocY = (int)Math.Round((bbox.Top - _Envelope.Top) * dblBBoxtoImgY);
+                        if (bbox.MinY != bottom)
+                            intLocY = (int)Math.Round((bbox.MaxY - _Envelope.Top) * dblBBoxtoImgY);
                         else
                             intLocY = size.Height - intImginMapH;
                     }
@@ -668,7 +670,7 @@ namespace SharpMap.Layers
                 g.DrawImage(bitmap, new System.Drawing.Point(intLocX, intLocY));
             }
 
-            private void GetPreview(GDAL.Dataset dataset, System.Drawing.Size size, System.Drawing.Graphics g, SharpMap.Geometries.BoundingBox bbox)
+            private void GetPreview(GDAL.Dataset dataset, System.Drawing.Size size, System.Drawing.Graphics g, IEnvelope bbox)
             {
                 double [] geoTrans = new double[6];        	
                 dataset.GetGeoTransform(geoTrans);
@@ -692,14 +694,14 @@ namespace SharpMap.Layers
                 if (dataset != null)
                 {
                     //check if image is in bounding box
-                    if ((bbox.Left > _Envelope.Right) || (bbox.Right < _Envelope.Left)
-                        || (bbox.Top < _Envelope.Bottom) || (bbox.Bottom > _Envelope.Top))
+                    if ((bbox.MinX > _Envelope.Right) || (bbox.MaxX < _Envelope.Left)
+                        || (bbox.MaxY < _Envelope.Bottom) || (bbox.MinY > _Envelope.Top))
                         return;
 
-                    double left = Math.Max(bbox.Left, _Envelope.Left);
-                    double top = Math.Min(bbox.Top, _Envelope.Top);
-                    double right = Math.Min(bbox.Right, _Envelope.Right);
-                    double bottom = Math.Max(bbox.Bottom, _Envelope.Bottom);
+                    double left = Math.Max(bbox.MinX, _Envelope.Left);
+                    double top = Math.Min(bbox.MaxY, _Envelope.Top);
+                    double right = Math.Min(bbox.MaxX, _Envelope.Right);
+                    double bottom = Math.Max(bbox.MinY, _Envelope.Bottom);
 
                     int x1 = (int)Math.Round(GT.PixelX(left));
                     int y1 = (int)Math.Round(GT.PixelY(top));
@@ -707,11 +709,11 @@ namespace SharpMap.Layers
                     int imgPixHeight = (int)Math.Round(GT.PixelYwidth(bottom - top));
 
                     //get screen pixels image should fill 
-                    double dblBBoxW = bbox.Right - bbox.Left;
+                    double dblBBoxW = bbox.MaxX - bbox.MinX;
                     double dblBBoxtoImgPixX = (double)imgPixWidth / (double)dblBBoxW;
                     intImginMapW = (int)Math.Round(size.Width * dblBBoxtoImgPixX * GT.HorizontalPixelResolution);
 
-                    double dblBBoxH = bbox.Top - bbox.Bottom;
+                    double dblBBoxH = bbox.MaxY - bbox.MinY;
                     double dblBBoxtoImgPixY = (double)imgPixHeight / (double)dblBBoxH;
                     intImginMapH = (int)Math.Round(size.Height * dblBBoxtoImgPixY * -GT.VerticalPixelResolution);
 
@@ -720,17 +722,17 @@ namespace SharpMap.Layers
                     double dblBBoxtoImgY = size.Height / dblBBoxH;
 
                     // set where to display bitmap in Map
-                    if (bbox.Left != left)
+                    if (bbox.MinX != left)
                     {
-                        if (bbox.Right != right)
-                            intLocX = (int)Math.Round((_Envelope.Left - bbox.Left) * dblBBoxtoImgX);
+                        if (bbox.MaxX != right)
+                            intLocX = (int)Math.Round((_Envelope.Left - bbox.MinX) * dblBBoxtoImgX);
                         else
                             intLocX = size.Width - intImginMapW;
                     }
-                    if (bbox.Top != top)
+                    if (bbox.MaxY != top)
                     {
-                        if (bbox.Bottom != bottom)
-                            intLocY = (int)Math.Round((bbox.Top - _Envelope.Top) * dblBBoxtoImgY);
+                        if (bbox.MinY != bottom)
+                            intLocY = (int)Math.Round((bbox.MaxY - _Envelope.Top) * dblBBoxtoImgY);
                         else
                             intLocY = size.Height - intImginMapH;
                     }

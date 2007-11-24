@@ -25,7 +25,7 @@ public class MapHelper
 			//Set up the countries layer
 			SharpMap.Layers.VectorLayer layCountries = new SharpMap.Layers.VectorLayer("Countries");
 			//Set the datasource to a shapefile in the App_data folder
-			layCountries.DataSource = new SharpMap.Data.Providers.ShapeFile(HttpContext.Current.Server.MapPath(@"~\App_data\countries.shp"), true);
+			layCountries.DataSource = new SharpMap.Data.Providers.ShapeFile(HttpContext.Current.Server.MapPath(@"~\App_data\countries.shp"), false);
 			
 			//Set fill-style to green
 			layCountries.Style.Fill = new SolidBrush(Color.Green);
@@ -37,7 +37,7 @@ public class MapHelper
 			//Set up a river layer
 			SharpMap.Layers.VectorLayer layRivers = new SharpMap.Layers.VectorLayer("Rivers");
 			//Set the datasource to a shapefile in the App_data folder
-			layRivers.DataSource = new SharpMap.Data.Providers.ShapeFile(HttpContext.Current.Server.MapPath(@"~\App_data\rivers.shp"), true);
+			layRivers.DataSource = new SharpMap.Data.Providers.ShapeFile(HttpContext.Current.Server.MapPath(@"~\App_data\rivers.shp"), false);
 			//Define a blue 1px wide pen
 			layRivers.Style.Line = new Pen(Color.Blue,1);
 			layRivers.SRID = 4326;
@@ -45,7 +45,7 @@ public class MapHelper
 			//Set up a river layer
 			SharpMap.Layers.VectorLayer layCities = new SharpMap.Layers.VectorLayer("Cities");
 			//Set the datasource to a shapefile in the App_data folder
-			layCities.DataSource = new SharpMap.Data.Providers.ShapeFile(HttpContext.Current.Server.MapPath(@"~\App_data\cities.shp"), true);
+			layCities.DataSource = new SharpMap.Data.Providers.ShapeFile(HttpContext.Current.Server.MapPath(@"~\App_data\cities.shp"), false);
 			//Define a blue 1px wide pen
 			//layCities.Style.Symbol = new Bitmap(HttpContext.Current.Server.MapPath(@"~\App_data\icon.png"));
 			layCities.Style.SymbolScale = 0.8f;
@@ -99,8 +99,8 @@ public class MapHelper
 			map.MaximumZoom = 360;
 			map.BackColor = Color.LightBlue;
 
-			map.Zoom = 360;
-			map.Center = new SharpMap.Geometries.Point(0,0);
+			map.ZoomToExtents(); // = 360;
+			map.Center = SharpMap.Converters.Geometries.GeometryFactory.CreateCoordinate(0,0);
 				
 			HttpContext.Current.Trace.Write("Map initialized");
 			return map;
@@ -175,7 +175,7 @@ public class MapHelper
 			//Set up the countries layer
 			SharpMap.Layers.VectorLayer layCountries = new SharpMap.Layers.VectorLayer("Countries");
 			//Set the datasource to a shapefile in the App_data folder
-			layCountries.DataSource = new SharpMap.Data.Providers.ShapeFile(HttpContext.Current.Server.MapPath(@"~\App_data\countries.shp"), true);
+			layCountries.DataSource = new SharpMap.Data.Providers.ShapeFile(HttpContext.Current.Server.MapPath(@"~\App_data\countries.shp"), false);
 			//Set fill-style to green
 			layCountries.Style.Fill = new SolidBrush(Color.Green);
 			//Set the polygons to have a black outline
@@ -208,7 +208,7 @@ public class MapHelper
 			map.BackColor = Color.LightBlue;
 
 			map.Zoom = 360;
-			map.Center = new SharpMap.Geometries.Point(0,0);
+			map.Center = SharpMap.Converters.Geometries.GeometryFactory.CreateCoordinate(0,0);
 				
 			HttpContext.Current.Trace.Write("Map initialized");
 			return map;

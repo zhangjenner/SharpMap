@@ -20,6 +20,8 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Drawing;
+using GeoAPI.Geometries;
+using SharpMap.Converters.Geometries;
 
 namespace SharpMap.Data.Providers
 {
@@ -142,7 +144,7 @@ namespace SharpMap.Data.Providers
 	{
 		private ShapeType _ShapeType;
 		private string _Filename;
-		private SharpMap.Geometries.BoundingBox _Envelope;
+		private IEnvelope _Envelope;
 		private DbaseReader dbaseFile;
 		private FileStream fsShapeIndex;
 		private BinaryReader brShapeIndex;
@@ -249,7 +251,7 @@ namespace SharpMap.Data.Providers
 			LoadSpatialIndex(FileBasedIndex); //Load spatial index			
 		}
 
-		private SharpMap.CoordinateSystems.ICoordinateSystem _CoordinateSystem;
+		private GeoAPI.CoordinateSystems.ICoordinateSystem _CoordinateSystem;
 
 		/// <summary>
 		/// Gets or sets the coordinate system of the ShapeFile. If a shapefile has 
@@ -258,7 +260,7 @@ namespace SharpMap.Data.Providers
 		/// If this is not the case, the coordinate system will default to null.
 		/// </summary>
 		/// <exception cref="ApplicationException">An exception is thrown if the coordinate system is read from file.</exception>
-		public SharpMap.CoordinateSystems.ICoordinateSystem CoordinateSystem
+        public GeoAPI.CoordinateSystems.ICoordinateSystem CoordinateSystem
 		{
 			get { return _CoordinateSystem; }
 			set {
@@ -384,7 +386,15 @@ namespace SharpMap.Data.Providers
 
 			//Read the spatial bounding box of the contents
 			brShapeIndex.BaseStream.Seek(36, 0); //seek to box
-			_Envelope = new SharpMap.Geometries.BoundingBox(brShapeIndex.ReadDouble(), brShapeIndex.ReadDouble(), brShapeIndex.ReadDouble(), brShapeIndex.ReadDouble());
+			
+            
+            double x1,x2,y1,y2;
+            x1=brShapeIndex.ReadDouble();
+            y1=brShapeIndex.ReadDouble();
+            x2=brShapeIndex.ReadDouble();
+            y2=brShapeIndex.ReadDouble();
+            
+            _Envelope = GeometryFactory.CreateEnvelope(x1, x2, y1, y2);
 
 			brShapeIndex.Close();
 			fsShapeIndex.Close();			
@@ -400,7 +410,7 @@ namespace SharpMap.Data.Providers
 				try
 				{
 					string wkt = System.IO.File.ReadAllText(projfile);
-					_CoordinateSystem = (SharpMap.CoordinateSystems.ICoordinateSystem)SharpMap.Converters.WellKnownText.CoordinateSystemWktReader.Parse(wkt);
+					_CoordinateSystem = (GeoAPI.CoordinateSystems.ICoordinateSystem)SharpMap.Converters.WellKnownText.CoordinateSystemWktReader.Parse(wkt);
 					_CoordsysReadFromFile = true;
 				}
 				catch(System.Exception ex) {
@@ -486,9 +496,9 @@ namespace SharpMap.Data.Providers
 			List<Utilities.SpatialIndexing.QuadTree.BoxObjects> objList = new List<Utilities.SpatialIndexing.QuadTree.BoxObjects>();
 			//Convert all the geometries to boundingboxes 
 			uint i = 0;
-			foreach (SharpMap.Geometries.BoundingBox box in GetAllFeatureBoundingBoxes())
+			foreach (IEnvelope box in GetAllFeatureBoundingBoxes())
 			{
-				if (!double.IsNaN(box.Left) && !double.IsNaN(box.Right) && !double.IsNaN(box.Bottom) && !double.IsNaN(box.Top))
+				if (!double.IsNaN(box.MinX) && !double.IsNaN(box.MaxX) && !double.IsNaN(box.MaxY) && !double.IsNaN(box.MinY))
 				{
 					Utilities.SpatialIndexing.QuadTree.BoxObjects g = new Utilities.SpatialIndexing.QuadTree.BoxObjects();
 					g.box = box;
@@ -562,11 +572,11 @@ namespace SharpMap.Data.Providers
 		/// Reads all boundingboxes of features in the shapefile. This is used for spatial indexing.
 		/// </summary>
 		/// <returns></returns>
-		private List<SharpMap.Geometries.BoundingBox> GetAllFeatureBoundingBoxes()
+		private List<IEnvelope> GetAllFeatureBoundingBoxes()
 		{
 			int[] offsetOfRecord = ReadIndex(); //Read the whole .idx file
 
-			List<SharpMap.Geometries.BoundingBox> boxes = new List<SharpMap.Geometries.BoundingBox>();
+			List<IEnvelope> boxes = new List<IEnvelope>();
 			
 			if (_ShapeType == ShapeType.Point)
 			{
@@ -577,7 +587,7 @@ namespace SharpMap.Data.Providers
 					{
 						double x = brShapeFile.ReadDouble();
 						double y = brShapeFile.ReadDouble();
-						boxes.Add(new SharpMap.Geometries.BoundingBox(x, y, x, y));
+						boxes.Add(GeometryFactory.CreateEnvelope(x, x, y, y));
 					}
 				}
 			}
@@ -586,8 +596,16 @@ namespace SharpMap.Data.Providers
 				for (int a = 0; a < _FeatureCount; ++a)
 				{
 					fsShapeFile.Seek(offsetOfRecord[a] + 8, 0); //skip record number and content length
-					if ((ShapeType)brShapeFile.ReadInt32() != ShapeType.Null)
-						boxes.Add(new SharpMap.Geometries.BoundingBox(brShapeFile.ReadDouble(), brShapeFile.ReadDouble(), brShapeFile.ReadDouble(), brShapeFile.ReadDouble()));
+                    if ((ShapeType)brShapeFile.ReadInt32() != ShapeType.Null)
+                    {
+                        double x1, x2, y1, y2;
+                        x1 = brShapeFile.ReadDouble();
+                        y1 = brShapeFile.ReadDouble();
+                        x2 = brShapeFile.ReadDouble();
+                        y2 = brShapeFile.ReadDouble();
+
+                        boxes.Add(GeometryFactory.CreateEnvelope(x1, x2, y1, y2));
+                    }
 				}
 			}
 			return boxes;
@@ -606,19 +624,19 @@ namespace SharpMap.Data.Providers
 		/// </remarks>
 		/// <param name="bbox"></param>
 		/// <returns></returns>
-		public Collection<SharpMap.Geometries.Geometry> GetGeometriesInView(SharpMap.Geometries.BoundingBox bbox)
+		public Collection<IGeometry> GetGeometriesInView(IEnvelope bbox)
 		{
 			//Use the spatial index to get a list of features whose boundingbox intersects bbox
 			Collection<uint> objectlist = GetObjectIDsInView(bbox);
 			if (objectlist.Count == 0) //no features found. Return an empty set
-				return new Collection<SharpMap.Geometries.Geometry>();
+				return new Collection<IGeometry>();
 
             //Collection<SharpMap.Geometries.Geometry> geometries = new Collection<SharpMap.Geometries.Geometry>(objectlist.Count);
-            Collection<SharpMap.Geometries.Geometry> geometries = new Collection<SharpMap.Geometries.Geometry>();
+            Collection<IGeometry> geometries = new Collection<IGeometry>();
 
 			for (int i = 0; i < objectlist.Count; i++)
 			{
-				SharpMap.Geometries.Geometry g = GetGeometryByID(objectlist[i]);
+				IGeometry g = GetGeometryByID(objectlist[i]);
 				if(g!=null)
 					geometries.Add(g);
 			}
@@ -637,7 +655,7 @@ namespace SharpMap.Data.Providers
 		/// <param name="bbox"></param>
 		/// <param name="ds"></param>
 		/// <returns></returns>
-		public void ExecuteIntersectionQuery(SharpMap.Geometries.BoundingBox bbox, SharpMap.Data.FeatureDataSet ds)
+		public void ExecuteIntersectionQuery(IEnvelope bbox, SharpMap.Data.FeatureDataSet ds)
 		{
 			//Use the spatial index to get a list of features whose boundingbox intersects bbox
 			Collection<uint> objectlist = GetObjectIDsInView(bbox);
@@ -648,7 +666,7 @@ namespace SharpMap.Data.Providers
 				SharpMap.Data.FeatureDataRow fdr = dbaseFile.GetFeature(objectlist[i], dt);
 				fdr.Geometry = ReadGeometry(objectlist[i]);
 				if (fdr.Geometry != null)
-					if (fdr.Geometry.GetBoundingBox().Intersects(bbox))
+					if (fdr.Geometry.EnvelopeInternal.Intersects(bbox))
 						if (FilterDelegate == null || FilterDelegate(fdr))
 							dt.AddRow(fdr);
 			}
@@ -660,7 +678,7 @@ namespace SharpMap.Data.Providers
 		/// </summary>
 		/// <param name="bbox"></param>
 		/// <returns></returns>
-		public Collection<uint> GetObjectIDsInView(SharpMap.Geometries.BoundingBox bbox)
+		public Collection<uint> GetObjectIDsInView(IEnvelope bbox)
 		{
 			if (!this.IsOpen)
 				throw (new ApplicationException("An attempt was made to read from a closed datasource"));
@@ -673,7 +691,7 @@ namespace SharpMap.Data.Providers
 		/// </summary>
 		/// <param name="oid">Object ID</param>
 		/// <returns>geometry</returns>
-		public SharpMap.Geometries.Geometry GetGeometryByID(uint oid)
+		public IGeometry GetGeometryByID(uint oid)
 		{
 			if (FilterDelegate != null) //Apply filtering
 			{
@@ -692,7 +710,7 @@ namespace SharpMap.Data.Providers
 		/// <remarks><see cref="FilterDelegate">Filtering</see> is not applied to this method</remarks>
 		/// <param name="oid">Object ID</param>
 		/// <returns>geometry</returns>
-		private SharpMap.Geometries.Geometry ReadGeometry(uint oid)
+		private IGeometry ReadGeometry(uint oid)
 		{		
 			brShapeFile.BaseStream.Seek(GetShapeIndex(oid) + 8, 0); //Skip record number and content length
 			ShapeType type = (ShapeType)brShapeFile.ReadInt32(); //Shape type
@@ -700,20 +718,22 @@ namespace SharpMap.Data.Providers
 				return null;
 			if (_ShapeType == ShapeType.Point || _ShapeType==ShapeType.PointM || _ShapeType==ShapeType.PointZ)
 			{
-				SharpMap.Geometries.Point tempFeature = new SharpMap.Geometries.Point();
-				return new SharpMap.Geometries.Point(brShapeFile.ReadDouble(), brShapeFile.ReadDouble());
+				//SharpMap.Geometries.Point tempFeature = new SharpMap.Geometries.Point();
+				return GeometryFactory.CreatePoint(brShapeFile.ReadDouble(), brShapeFile.ReadDouble());
 			}
 			else if (_ShapeType == ShapeType.Multipoint || _ShapeType == ShapeType.MultiPointM || _ShapeType == ShapeType.MultiPointZ)
 			{
 				brShapeFile.BaseStream.Seek(32 + brShapeFile.BaseStream.Position, 0); //skip min/max box
-				SharpMap.Geometries.MultiPoint feature = new SharpMap.Geometries.MultiPoint();
+				List<IPoint> feature = new List<IPoint>();
+				//SharpMap.Geometries.MultiPoint feature = new SharpMap.Geometries.MultiPoint();
 				int nPoints = brShapeFile.ReadInt32(); // get the number of points
 				if (nPoints == 0)
 					return null;
 				for (int i = 0; i < nPoints; i++)
-					feature.Points.Add(new SharpMap.Geometries.Point(brShapeFile.ReadDouble(), brShapeFile.ReadDouble()));
+					feature.Add(GeometryFactory.CreatePoint(brShapeFile.ReadDouble(), brShapeFile.ReadDouble()));
+					
 
-				return feature;
+				return GeometryFactory.CreateMultiPoint(feature.ToArray());
 			}
 			else if (	_ShapeType == ShapeType.PolyLine || _ShapeType == ShapeType.Polygon ||
 						_ShapeType == ShapeType.PolyLineM || _ShapeType == ShapeType.PolygonM ||
@@ -735,64 +755,73 @@ namespace SharpMap.Data.Providers
 
 				if ((int)_ShapeType%10 == 3)
 				{
-					SharpMap.Geometries.MultiLineString mline = new SharpMap.Geometries.MultiLineString();
+					//SharpMap.Geometries.MultiLineString mline = new SharpMap.Geometries.MultiLineString();
+					List<ILineString> mline = new List<ILineString>();
 					for (int LineID = 0; LineID < nParts; LineID++)
 					{
-						SharpMap.Geometries.LineString line = new SharpMap.Geometries.LineString();
+							//SharpMap.Geometries.LineString line = new SharpMap.Geometries.LineString();
+						List<ICoordinate> line = new List<ICoordinate>();
 						for (int i = segments[LineID]; i < segments[LineID + 1]; i++)
-							line.Vertices.Add(new SharpMap.Geometries.Point(brShapeFile.ReadDouble(), brShapeFile.ReadDouble()));
-						mline.LineStrings.Add(line);
+							line.Add(GeometryFactory.CreateCoordinate(brShapeFile.ReadDouble(), brShapeFile.ReadDouble()));
+							//line.Vertices.Add(new SharpMap.Geometries.Point(
+						mline.Add(GeometryFactory.CreateLineString(line.ToArray()));
 					}
-					if (mline.LineStrings.Count == 1)
+					if (mline.Count == 1)
 						return mline[0];
-					return mline;
+					return GeometryFactory.CreateMultiLineString(mline.ToArray());
 				}
 				else //(_ShapeType == ShapeType.Polygon etc...)
 				{
 					
 					//First read all the rings
-					List<SharpMap.Geometries.LinearRing> rings = new List<SharpMap.Geometries.LinearRing>();
+					//List<SharpMap.Geometries.LinearRing> rings = new List<SharpMap.Geometries.LinearRing>();
+					List<ILinearRing> rings = new List<ILinearRing>();
 					for (int RingID = 0; RingID < nParts; RingID++)
 					{
-						SharpMap.Geometries.LinearRing ring = new SharpMap.Geometries.LinearRing();
+						//SharpMap.Geometries.LinearRing ring = new SharpMap.Geometries.LinearRing();
+						List<ICoordinate> ring = new List<ICoordinate>();
 						for (int i = segments[RingID]; i < segments[RingID + 1]; i++)
-							ring.Vertices.Add(new SharpMap.Geometries.Point(brShapeFile.ReadDouble(), brShapeFile.ReadDouble()));
-						rings.Add(ring);
+							ring.Add(GeometryFactory.CreateCoordinate(brShapeFile.ReadDouble(), brShapeFile.ReadDouble()));
+							
+							//ring.Vertices.Add(new SharpMap.Geometries.Point
+						rings.Add(GeometryFactory.CreateLinearRing(ring.ToArray()));
 					}
 					bool[] IsCounterClockWise = new bool[rings.Count];
 					int PolygonCount = 0;
 					for (int i = 0; i < rings.Count;i++)
 					{
-						IsCounterClockWise[i] = rings[i].IsCCW();
+						IsCounterClockWise[i] = GeometryFactory.IsCCW(rings[i].Coordinates);
 						if (!IsCounterClockWise[i])
 							PolygonCount++;
 					}
 					if (PolygonCount == 1) //We only have one polygon
 					{
-						SharpMap.Geometries.Polygon poly = new SharpMap.Geometries.Polygon();
-						poly.ExteriorRing = rings[0];
+						ILinearRing shell = rings[0];
+						List<ILinearRing> holes = new List<ILinearRing>();
 						if (rings.Count > 1)
 							for (int i = 1; i < rings.Count; i++)
-								poly.InteriorRings.Add(rings[i]);
-						return poly;
+								holes.Add(rings[i]);
+						return GeometryFactory.CreatePolygon(shell, holes.ToArray());
 					}
 					else
 					{
-						SharpMap.Geometries.MultiPolygon mpoly = new SharpMap.Geometries.MultiPolygon();
-						SharpMap.Geometries.Polygon poly = new SharpMap.Geometries.Polygon();
-						poly.ExteriorRing = rings[0];
+						List<IPolygon> polys = new List<IPolygon>();
+						ILinearRing shell = rings[0];
+						List<ILinearRing> holes = new List<ILinearRing>();
 						for (int i = 1; i < rings.Count;i++)
 						{
 							if (!IsCounterClockWise[i])
 							{
-								mpoly.Polygons.Add(poly);
-								poly = new SharpMap.Geometries.Polygon(rings[i]);
+								polys.Add(GeometryFactory.CreatePolygon(shell, null));
+								shell = rings[i];
 							}
 							else
-								poly.InteriorRings.Add(rings[i]);
+								holes.Add(rings[i]);
 						}
-						mpoly.Polygons.Add(poly);
-						return mpoly;
+						polys.Add(GeometryFactory.CreatePolygon(shell, holes.ToArray()));
+						return GeometryFactory.CreateMultiPolygon(polys.ToArray());
+						
+						
 					}					
 				}
 			}
@@ -808,10 +837,10 @@ namespace SharpMap.Data.Providers
 		/// </summary>
 		/// <param name="geom"></param>
 		/// <param name="ds">FeatureDataSet to fill data into</param>
-		public void ExecuteIntersectionQuery(SharpMap.Geometries.Geometry geom, FeatureDataSet ds)
+		public void ExecuteIntersectionQuery(IGeometry geom, FeatureDataSet ds)
 		{			
 			SharpMap.Data.FeatureDataTable dt = (SharpMap.Data.FeatureDataTable)dbaseFile.NewTable;
-			SharpMap.Geometries.BoundingBox bbox = geom.GetBoundingBox();
+			IEnvelope bbox = geom.EnvelopeInternal;
 			//Get candidates by intersecting the spatial index tree
 			Collection<uint> objectlist = tree.Search(bbox);
 
@@ -824,8 +853,9 @@ namespace SharpMap.Data.Providers
 				{
 					FeatureDataRow fdr = GetFeature(objectlist[j],dt);
 					if (fdr.Geometry != null)
-						if (fdr.Geometry.GetBoundingBox().Intersects(bbox))
-						//replace above line with this:  if(fdr.Geometry.Intersects(bbox))  when relation model is complete
+			            //if (fdr.Geometry.EnvelopeInternal.Intersects(bbox))
+                        if (fdr.Geometry.Intersects(geom))
+                            //replace above line with this:  if(fdr.Geometry.Intersects(bbox))  when relation model is complete
 							if (FilterDelegate == null || FilterDelegate(fdr))
 								dt.AddRow(fdr);
 				}
@@ -947,7 +977,7 @@ namespace SharpMap.Data.Providers
 		/// Returns the extents of the datasource
 		/// </summary>
 		/// <returns></returns>
-		public SharpMap.Geometries.BoundingBox GetExtents()
+		public IEnvelope GetExtents()
 		{
 			if (tree == null)
 				throw new ApplicationException("File hasn't been spatially indexed. Try opening the datasource before retriving extents");

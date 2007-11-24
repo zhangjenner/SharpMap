@@ -10,6 +10,9 @@ using System.Web.UI.WebControls;
 using System.Web.UI.WebControls.WebParts;
 using System.Web.UI.HtmlControls;
 
+using GeoAPI.Geometries;
+using SharpMap.Converters.Geometries;
+
 public partial class Simple : System.Web.UI.Page
 {
 	private SharpMap.Map myMap;
@@ -21,8 +24,9 @@ public partial class Simple : System.Web.UI.Page
 		if (Page.IsPostBack) 
 		{
 			//Page is post back. Restore center and zoom-values from viewstate
-			myMap.Center = (SharpMap.Geometries.Point)ViewState["mapCenter"];
+			myMap.Center = (ICoordinate)ViewState["mapCenter"];
 			myMap.Zoom = (double)ViewState["mapZoom"];
+
 		}
 		else
 		{

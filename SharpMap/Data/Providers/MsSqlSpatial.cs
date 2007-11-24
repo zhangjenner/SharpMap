@@ -22,8 +22,9 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Text;
 using System.Data.SqlClient;
+using GeoAPI.Geometries;
+
 
 namespace SharpMap.Data.Providers
 {
@@ -253,9 +254,9 @@ namespace SharpMap.Data.Providers
 		/// </summary>
 		/// <param name="bbox"></param>
 		/// <returns></returns>
-		public Collection<Geometries.Geometry> GetGeometriesInView(SharpMap.Geometries.BoundingBox bbox)
+		public Collection<GeoAPI.Geometries.IGeometry> GetGeometriesInView(GeoAPI.Geometries.IEnvelope bbox)
 		{
-			Collection<Geometries.Geometry> features = new Collection<SharpMap.Geometries.Geometry>();
+			Collection<IGeometry> features = new Collection<IGeometry>();
 			using (SqlConnection conn = new SqlConnection(_ConnectionString))
 			{
 				string strSQL = "SELECT ST.AsBinary(" + this.BuildGeometryExpression() + ") ";
@@ -276,7 +277,7 @@ namespace SharpMap.Data.Providers
 						{
 							if (dr[0] != DBNull.Value)
 							{
-								SharpMap.Geometries.Geometry geom = SharpMap.Converters.WellKnownBinary.GeometryFromWKB.Parse((byte[])dr[0]);
+								GeoAPI.Geometries.IGeometry geom = SharpMap.Converters.WellKnownBinary.GeometryFromWKB.Parse((byte[])dr[0]);
 								if(geom!=null)
 									features.Add(geom);
 							}
@@ -293,9 +294,9 @@ namespace SharpMap.Data.Providers
 		/// </summary>
 		/// <param name="oid">Object ID</param>
 		/// <returns>geometry</returns>
-		public SharpMap.Geometries.Geometry GetGeometryByID(uint oid)
+		public GeoAPI.Geometries.IGeometry GetGeometryByID(uint oid)
 		{
-			SharpMap.Geometries.Geometry geom = null;
+			GeoAPI.Geometries.IGeometry geom = null;
 			using (SqlConnection conn = new SqlConnection(this.ConnectionString))
 			{
 				string strSQL = "SELECT ST.AsBinary(" + this.BuildGeometryExpression() + ") AS Geom FROM " + this.Table + " WHERE " + this.ObjectIdColumn + "='" + oid.ToString() + "'";
@@ -320,7 +321,7 @@ namespace SharpMap.Data.Providers
 		/// </summary>
 		/// <param name="bbox"></param>
 		/// <returns></returns>
-		public Collection<uint> GetObjectIDsInView(SharpMap.Geometries.BoundingBox bbox)
+		public Collection<uint> GetObjectIDsInView(GeoAPI.Geometries.IEnvelope bbox)
 		{
 			Collection<uint> objectlist = new Collection<uint>();
 			using (SqlConnection conn = new SqlConnection(this.ConnectionString))
@@ -360,7 +361,7 @@ namespace SharpMap.Data.Providers
 		/// <param name="distance"></param>
 		/// <returns></returns>
 		[Obsolete("Use ExecuteIntersectionQuery instead")]
-		public SharpMap.Data.FeatureDataTable QueryFeatures(SharpMap.Geometries.Geometry geom, double distance)
+		public SharpMap.Data.FeatureDataTable QueryFeatures(GeoAPI.Geometries.IGeometry geom, double distance)
 		{
 			//List<Geometries.Geometry> features = new List<SharpMap.Geometries.Geometry>();
 			using (SqlConnection conn = new SqlConnection(this.ConnectionString))
@@ -414,9 +415,9 @@ namespace SharpMap.Data.Providers
 		/// </summary>
 		/// <param name="geom"></param>
 		/// <param name="ds">FeatureDataSet to fill data into</param>
-		public void ExecuteIntersectionQuery(SharpMap.Geometries.Geometry geom, FeatureDataSet ds)
+		public void ExecuteIntersectionQuery(GeoAPI.Geometries.IGeometry geom, FeatureDataSet ds)
 		{
-			List<Geometries.Geometry> features = new List<SharpMap.Geometries.Geometry>();
+			List<IGeometry> features = new List<IGeometry>();
 			using (SqlConnection conn = new SqlConnection(this.ConnectionString))
 			{
 				string strGeom;
@@ -652,7 +653,7 @@ namespace SharpMap.Data.Providers
 		/// Boundingbox of dataset
 		/// </summary>
 		/// <returns>boundingbox</returns>
-		public SharpMap.Geometries.BoundingBox GetExtents()
+		public GeoAPI.Geometries.IEnvelope GetExtents()
 		{
 			using (SqlConnection conn = new SqlConnection(_ConnectionString))
 			{
@@ -664,7 +665,7 @@ namespace SharpMap.Data.Providers
 					conn.Close();
 					if (result == System.DBNull.Value)
 						return null;
-					SharpMap.Geometries.BoundingBox bbox = SharpMap.Converters.WellKnownBinary.GeometryFromWKB.Parse((byte[])result).GetBoundingBox();
+					GeoAPI.Geometries.IEnvelope bbox = SharpMap.Converters.WellKnownBinary.GeometryFromWKB.Parse((byte[])result).EnvelopeInternal;
 					return bbox;
 				}
 			}
@@ -688,7 +689,7 @@ namespace SharpMap.Data.Providers
 		/// <param name="bbox">view box</param>
 		/// <param name="ds">FeatureDataSet to fill data into</param>
 		[Obsolete("Use ExecuteIntersectionQuery")]
-		public void GetFeaturesInView(SharpMap.Geometries.BoundingBox bbox, SharpMap.Data.FeatureDataSet ds)
+		public void GetFeaturesInView(GeoAPI.Geometries.IEnvelope bbox, SharpMap.Data.FeatureDataSet ds)
 		{
 			ExecuteIntersectionQuery(bbox, ds);
 		}
@@ -698,9 +699,9 @@ namespace SharpMap.Data.Providers
 		/// </summary>
 		/// <param name="bbox">view box</param>
 		/// <param name="ds">FeatureDataSet to fill data into</param>
-		public void ExecuteIntersectionQuery(SharpMap.Geometries.BoundingBox bbox, SharpMap.Data.FeatureDataSet ds)
+		public void ExecuteIntersectionQuery(GeoAPI.Geometries.IEnvelope bbox, SharpMap.Data.FeatureDataSet ds)
 		{
-			List<Geometries.Geometry> features = new List<SharpMap.Geometries.Geometry>();
+			//List<GeoAPI.Geometries.IGeometry> features = new List<GeoAPI.Geometries.IGeometry>();
 			using (SqlConnection conn = new SqlConnection(_ConnectionString))
 			{
 				string strSQL = "SELECT " + this.FeatureColumns + ", ST.AsBinary(" + this.BuildGeometryExpression() + ") AS sharpmap_tempgeometry ";
@@ -763,24 +764,24 @@ namespace SharpMap.Data.Providers
 			return string.Format(this.GeometryExpression, this.TargetGeometryColumn);
 		}
 
-		private string BuildEnvelope(SharpMap.Geometries.BoundingBox bbox)
+		private string BuildEnvelope(GeoAPI.Geometries.IEnvelope bbox)
 		{
 			if (this.TargetSRID > 0 && this.SRID > 0 && this.SRID != this.TargetSRID)
 				return string.Format(SharpMap.Map.numberFormat_EnUS,
 					"ST.Transform(ST.MakeEnvelope({0},{1},{2},{3},{4}),{5})",
-						bbox.Min.X,
-						bbox.Min.Y,
-						bbox.Max.X,
-						bbox.Max.Y,
+						bbox.MinX,
+						bbox.MinY,
+						bbox.MaxX,
+						bbox.MaxY,
 						this.TargetSRID,
 						this.SRID);
 			else
 				return string.Format(SharpMap.Map.numberFormat_EnUS, 
 					"ST.MakeEnvelope({0},{1},{2},{3},{4})",
-					bbox.Min.X,
-					bbox.Min.Y,
-					bbox.Max.X,
-					bbox.Max.Y,
+					bbox.MinX,
+					bbox.MinY,
+					bbox.MaxX,
+					bbox.MaxY,
 					this.SRID);
 		}
 	}

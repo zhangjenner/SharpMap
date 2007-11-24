@@ -12,7 +12,12 @@ using System.Web.UI.WebControls.WebParts;
 using System.Web.UI.HtmlControls;
 
 using SharpMap.CoordinateSystems;
-using SharpMap.CoordinateSystems.Transformations; 
+using SharpMap.CoordinateSystems.Transformations;
+
+using SharpMap.Converters.Geometries;
+using GeoAPI.Geometries;
+using GeoAPI.CoordinateSystems;
+using GeoAPI.CoordinateSystems.Transformations;
 
 public partial class Transformation : System.Web.UI.Page
 {
@@ -26,14 +31,14 @@ public partial class Transformation : System.Web.UI.Page
 		if (Page.IsPostBack)
 		{
 			//Page is post back. Restore center and zoom-values from viewstate
-			myMap.Center = (SharpMap.Geometries.Point)ViewState["mapCenter"];
+			myMap.Center = (ICoordinate)ViewState["mapCenter"];
 			myMap.Zoom = (double)ViewState["mapZoom"];
 		}
 		else
 		{
 			//This is the initial view of the map. Zoom to the extents of the map:
 			myMap.Zoom = 80;
-			myMap.Center = new SharpMap.Geometries.Point(-95, 37);
+			myMap.Center = GeometryFactory.CreateCoordinate(-95, 37);
 			//Create the map
 			GenerateMap();
 		}
@@ -65,8 +70,10 @@ public partial class Transformation : System.Web.UI.Page
 		System.Drawing.Image img = myMap.GetMap();
 		string imgID = SharpMap.Web.Caching.InsertIntoCache(1, img);
 		imgMap.ImageUrl = "getmap.aspx?ID=" + HttpUtility.UrlEncode(imgID);
-		litEnvelope.Text = myMap.Envelope.Left.ToString("#.##") + "," + myMap.Envelope.Bottom.ToString("#.##") + " -> " +
-			myMap.Envelope.Right.ToString("#.##") + "," + myMap.Envelope.Top.ToString("#.##") + " (Projected coordinate system)";
+		litEnvelope.Text = myMap.Envelope.MinX.ToString("#.##") + "," + 
+                           myMap.Envelope.MinY.ToString("#.##") + " -> " +
+			               myMap.Envelope.MaxX.ToString("#.##") + "," + 
+                           myMap.Envelope.MaxY.ToString("#.##") + " (Projected coordinate system)";
 	}
 
 	protected void ddlProjection_SelectedIndexChanged(object sender, EventArgs e)
@@ -76,23 +83,23 @@ public partial class Transformation : System.Web.UI.Page
 		string SelectedProj = ddlProjection.SelectedValue;
 
 		//Points defining the current view 
-		SharpMap.Geometries.Point left = new SharpMap.Geometries.Point(myMap.Envelope.Left, myMap.Center.Y);
-		SharpMap.Geometries.Point right = new SharpMap.Geometries.Point(myMap.Envelope.Right, myMap.Center.Y);
-		SharpMap.Geometries.Point center = myMap.Center;
+        IPoint left = GeometryFactory.CreatePoint(myMap.Envelope.MinX, myMap.Center.Y);
+        IPoint right = GeometryFactory.CreatePoint(myMap.Envelope.MaxX, myMap.Center.Y);
+        IPoint center = GeometryFactory.CreatePoint(myMap.Center.X, myMap.Center.Y);
 
 		if (PreviousProj != "Pseudo")
 		{
 			//Transform current view back to geographic coordinates
 			ICoordinateTransformation trans = GetTransform(PreviousProj);
-			left = GeometryTransform.TransformPoint(new SharpMap.Geometries.Point(myMap.Envelope.Left, myMap.Center.Y), trans.MathTransform.Inverse());
-			right = GeometryTransform.TransformPoint(new SharpMap.Geometries.Point(myMap.Envelope.Right, myMap.Center.Y), trans.MathTransform.Inverse());
-			center = GeometryTransform.TransformPoint(myMap.Center, trans.MathTransform.Inverse());
+            left = GeometryTransform.TransformPoint(GeometryFactory.CreatePoint(myMap.Envelope.MinX, myMap.Center.Y), trans.MathTransform.Inverse());
+            right = GeometryTransform.TransformPoint(GeometryFactory.CreatePoint(myMap.Envelope.MaxX, myMap.Center.Y), trans.MathTransform.Inverse());
+            center = GeometryTransform.TransformPoint(GeometryFactory.CreatePoint(myMap.Center.X, myMap.Center.Y), trans.MathTransform.Inverse());
 		}
 		//If both PreviousSRID and SelectedSRID are projected coordsys, first transform to geographic
 
 		if (SelectedProj == "Pseudo")
 		{
-			myMap.Center = center;
+            myMap.Center = GeometryFactory.CreateCoordinate(center.X, center.Y);
 			myMap.Zoom = Math.Abs(right.X - left.X);
 		}
 		else //Project coordinates to new projection
@@ -102,9 +109,9 @@ public partial class Transformation : System.Web.UI.Page
 			left = GeometryTransform.TransformPoint(left, trans.MathTransform);
 			right = GeometryTransform.TransformPoint(right, trans.MathTransform);
 			center = GeometryTransform.TransformPoint(center, trans.MathTransform);
-			myMap.Center = center;
+			myMap.Center = GeometryFactory.CreateCoordinate(center.X, center.Y);
 			myMap.Zoom = Math.Abs(right.X - left.X);
-			SharpMap.Geometries.BoundingBox envelopeGcs =GeometryTransform.TransformBox(myMap.Envelope, trans.MathTransform.Inverse());
+			IEnvelope envelopeGcs =GeometryTransform.TransformBox(myMap.Envelope, trans.MathTransform.Inverse());
 			litEnvelopeLatLong.Text = envelopeGcs.ToString();
 		}
 		GenerateMap();
@@ -120,7 +127,7 @@ public partial class Transformation : System.Web.UI.Page
 		//Set up the countries layer
 		SharpMap.Layers.VectorLayer layCountries = new SharpMap.Layers.VectorLayer("Countries");
 		//Set the datasource to a shapefile in the App_data folder
-		SharpMap.Data.Providers.ShapeFile datasource = new SharpMap.Data.Providers.ShapeFile(HttpContext.Current.Server.MapPath(@"~\App_data\USA\states.shp"), true);
+		SharpMap.Data.Providers.ShapeFile datasource = new SharpMap.Data.Providers.ShapeFile(HttpContext.Current.Server.MapPath(@"~\App_data\USA\states.shp"), false);
 		layCountries.DataSource = datasource;
 		datacoordsys = datasource.CoordinateSystem;
 
@@ -144,7 +151,7 @@ public partial class Transformation : System.Web.UI.Page
 		}
 		SharpMap.Layers.VectorLayer layGrid = new SharpMap.Layers.VectorLayer("Grid");
 		//Set the datasource to a shapefile in the App_data folder
-		layGrid.DataSource = new SharpMap.Data.Providers.ShapeFile(HttpContext.Current.Server.MapPath(@"~\App_data\USA\latlong.shp"), true);
+		layGrid.DataSource = new SharpMap.Data.Providers.ShapeFile(HttpContext.Current.Server.MapPath(@"~\App_data\USA\latlong.shp"), false);
 		layGrid.CoordinateTransformation = layCountries.CoordinateTransformation;
 		layGrid.Style.Line = new Pen(Color.FromArgb(127, 255, 0, 0), 1);
 

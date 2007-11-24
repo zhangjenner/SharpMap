@@ -19,6 +19,8 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Drawing.Drawing2D;
+using SharpMap.Utilities;
+using GeoAPI.Geometries;
 
 namespace SharpMap.Rendering
 {
@@ -36,10 +38,10 @@ namespace SharpMap.Rendering
 		/// <param name="lines">MultiLineString to be rendered</param>
 		/// <param name="pen">Pen style used for rendering</param>
 		/// <param name="map">Map reference</param>
-		public static void DrawMultiLineString(System.Drawing.Graphics g, Geometries.MultiLineString lines, System.Drawing.Pen pen, SharpMap.Map map)
+		public static void DrawMultiLineString(System.Drawing.Graphics g, IMultiLineString lines, System.Drawing.Pen pen, SharpMap.Map map)
 		{
-			for (int i = 0; i < lines.LineStrings.Count; i++)
-				DrawLineString(g, lines.LineStrings[i], pen, map);
+			for (int i = 0; i < lines.Geometries.Length; i++)
+				DrawLineString(g, (ILineString)lines.Geometries[i], pen, map);
 		}
 
 		/// <summary>
@@ -49,12 +51,12 @@ namespace SharpMap.Rendering
 		/// <param name="line">LineString to render</param>
 		/// <param name="pen">Pen style used for rendering</param>
 		/// <param name="map">Map reference</param>
-		public static void DrawLineString(System.Drawing.Graphics g, Geometries.LineString line, System.Drawing.Pen pen, SharpMap.Map map)
+		public static void DrawLineString(System.Drawing.Graphics g, ILineString line, System.Drawing.Pen pen, SharpMap.Map map)
 		{
-			if (line.Vertices.Count > 1)
+			if (line.Coordinates.Length > 1)
 			{
 				System.Drawing.Drawing2D.GraphicsPath gp = new System.Drawing.Drawing2D.GraphicsPath();
-				gp.AddLines(line.TransformToImage(map));
+				gp.AddLines(Transform.TransformToImage(line, map));
 				g.DrawPath(pen, gp);
 			}
 		}
@@ -68,10 +70,10 @@ namespace SharpMap.Rendering
 		/// <param name="pen">Outline pen style (null if no outline)</param>
 		/// <param name="clip">Specifies whether polygon clipping should be applied</param>
 		/// <param name="map">Map reference</param>
-		public static void DrawMultiPolygon(System.Drawing.Graphics g, Geometries.MultiPolygon pols, System.Drawing.Brush brush, System.Drawing.Pen pen, bool clip, SharpMap.Map map)
+		public static void DrawMultiPolygon(System.Drawing.Graphics g, IMultiPolygon pols, System.Drawing.Brush brush, System.Drawing.Pen pen, bool clip, SharpMap.Map map)
 		{
-			for (int i = 0; i < pols.Polygons.Count; i++)
-				DrawPolygon(g, pols.Polygons[i], brush, pen, clip, map);
+			for (int i = 0; i < pols.Geometries.Length; i++)
+				DrawPolygon(g, (IPolygon)pols.Geometries[i], brush, pen, clip, map);
 		}
 
 		/// <summary>
@@ -83,27 +85,27 @@ namespace SharpMap.Rendering
 		/// <param name="pen">Outline pen style (null if no outline)</param>
 		/// <param name="clip">Specifies whether polygon clipping should be applied</param>
 		/// <param name="map">Map reference</param>
-		public static void DrawPolygon(System.Drawing.Graphics g, SharpMap.Geometries.Polygon pol, System.Drawing.Brush brush, System.Drawing.Pen pen, bool clip, SharpMap.Map map)
+		public static void DrawPolygon(System.Drawing.Graphics g, IPolygon pol, System.Drawing.Brush brush, System.Drawing.Pen pen, bool clip, SharpMap.Map map)
 		{
-			if (pol.ExteriorRing == null)
+			if (pol.Shell == null)
 				return;
-			if (pol.ExteriorRing.Vertices.Count > 2)
+			if (pol.Shell.Coordinates.Length > 2)
 			{
 				//Use a graphics path instead of DrawPolygon. DrawPolygon has a problem with several interior holes
 				System.Drawing.Drawing2D.GraphicsPath gp = new System.Drawing.Drawing2D.GraphicsPath();
 
 				//Add the exterior polygon
 				if (!clip)
-					gp.AddPolygon(pol.ExteriorRing.TransformToImage(map));
+					gp.AddPolygon(Transform.TransformToImage(pol.Shell, map));
 				else
-					gp.AddPolygon(clipPolygon(pol.ExteriorRing.TransformToImage(map), map.Size.Width, map.Size.Height));
+					gp.AddPolygon(clipPolygon(Transform.TransformToImage(pol.Shell, map), map.Size.Width, map.Size.Height));
 
 				//Add the interior polygons (holes)
-				for (int i = 0; i < pol.InteriorRings.Count; i++)
+				for (int i = 0; i < pol.Holes.Length; i++)
 					if (!clip)
-						gp.AddPolygon(pol.InteriorRings[i].TransformToImage(map));
+						gp.AddPolygon(Transform.TransformToImage(pol.Holes[i], map));
 					else
-						gp.AddPolygon(clipPolygon(pol.InteriorRings[i].TransformToImage(map), map.Size.Width, map.Size.Height));
+						gp.AddPolygon(clipPolygon(Transform.TransformToImage(pol.Holes[i], map), map.Size.Width, map.Size.Height));
 
 				// Only render inside of polygon if the brush isn't null or isn't transparent
 				if (brush != null && brush != System.Drawing.Brushes.Transparent)
@@ -321,14 +323,14 @@ namespace SharpMap.Rendering
 		/// <param name="offset">Symbol offset af scale=1</param>
 		/// <param name="rotation">Symbol rotation in degrees</param>
 		/// <param name="map">Map reference</param>
-		public static void DrawPoint(System.Drawing.Graphics g, SharpMap.Geometries.Point point, System.Drawing.Bitmap symbol, float symbolscale, System.Drawing.PointF offset, float rotation, SharpMap.Map map)
+		public static void DrawPoint(System.Drawing.Graphics g, IPoint point, System.Drawing.Bitmap symbol, float symbolscale, System.Drawing.PointF offset, float rotation, SharpMap.Map map)
 		{
 			if (point == null)
 				return;
 			if (symbol == null) //We have no point style - Use a default symbol
 				symbol = defaultsymbol;
 			
-			System.Drawing.PointF pp = SharpMap.Utilities.Transform.WorldtoMap(point, map);
+			System.Drawing.PointF pp = SharpMap.Utilities.Transform.WorldtoMap(point.Coordinate, map);
 			
 			Matrix startingTransform = g.Transform;
 			
@@ -374,10 +376,10 @@ namespace SharpMap.Rendering
 		/// <param name="offset">Symbol offset af scale=1</param>
 		/// <param name="rotation">Symbol rotation in degrees</param>
 		/// <param name="map">Map reference</param>
-		public static void DrawMultiPoint(System.Drawing.Graphics g, Geometries.MultiPoint points, System.Drawing.Bitmap symbol, float symbolscale, System.Drawing.PointF offset, float rotation, SharpMap.Map map)
+		public static void DrawMultiPoint(System.Drawing.Graphics g, IMultiPoint points, System.Drawing.Bitmap symbol, float symbolscale, System.Drawing.PointF offset, float rotation, SharpMap.Map map)
 		{
-			for (int i = 0; i < points.Points.Count; i++)
-				DrawPoint(g, points.Points[i], symbol, symbolscale, offset, rotation, map);
+			for (int i = 0; i < points.Geometries.Length; i++)
+				DrawPoint(g, (IPoint)points.Geometries[i], symbol, symbolscale, offset, rotation, map);
 		}
 	}
 }

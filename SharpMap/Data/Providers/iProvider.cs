@@ -32,7 +32,7 @@ namespace SharpMap.Data.Providers
 		/// </summary>
 		/// <param name="bbox"></param>
 		/// <returns>Features within the specified <see cref="SharpMap.Geometries.BoundingBox"/></returns>
-        System.Collections.ObjectModel.Collection<SharpMap.Geometries.Geometry> GetGeometriesInView(SharpMap.Geometries.BoundingBox bbox);
+        System.Collections.ObjectModel.Collection<GeoAPI.Geometries.IGeometry> GetGeometriesInView(GeoAPI.Geometries.IEnvelope bbox);
 
 		/// <summary>
 		/// Returns all objects whose <see cref="SharpMap.Geometries.BoundingBox"/> intersects 'bbox'.
@@ -43,28 +43,28 @@ namespace SharpMap.Data.Providers
 		/// </remarks>
 		/// <param name="bbox">Box that objects should intersect</param>
 		/// <returns></returns>
-        System.Collections.ObjectModel.Collection<uint> GetObjectIDsInView(SharpMap.Geometries.BoundingBox bbox);
+        System.Collections.ObjectModel.Collection<uint> GetObjectIDsInView(GeoAPI.Geometries.IEnvelope bbox);
 
 		/// <summary>
 		/// Returns the geometry corresponding to the Object ID
 		/// </summary>
 		/// <param name="oid">Object ID</param>
 		/// <returns>geometry</returns>
-		SharpMap.Geometries.Geometry GetGeometryByID(uint oid);
+		GeoAPI.Geometries.IGeometry GetGeometryByID(uint oid);
 			
 		/// <summary>
 		/// Returns the data associated with all the geometries that are intersected by 'geom'
 		/// </summary>
 		/// <param name="geom">Geometry to intersect with</param>
 		/// <param name="ds">FeatureDataSet to fill data into</param>
-		void ExecuteIntersectionQuery(SharpMap.Geometries.Geometry geom, FeatureDataSet ds);
+		void ExecuteIntersectionQuery(GeoAPI.Geometries.IGeometry geom, FeatureDataSet ds);
 
 		/// <summary>
 		/// Returns the data associated with all the geometries that are intersected by 'geom'
 		/// </summary>
 		/// <param name="box">Geometry to intersect with</param>
 		/// <param name="ds">FeatureDataSet to fill data into</param>
-		void ExecuteIntersectionQuery(SharpMap.Geometries.BoundingBox box, FeatureDataSet ds);
+		void ExecuteIntersectionQuery(GeoAPI.Geometries.IEnvelope box, FeatureDataSet ds);
 
 		/// <summary>
 		/// Returns the number of features in the dataset
@@ -83,7 +83,7 @@ namespace SharpMap.Data.Providers
 		/// <see cref="SharpMap.Geometries.BoundingBox"/> of dataset
 		/// </summary>
 		/// <returns>boundingbox</returns>
-		SharpMap.Geometries.BoundingBox GetExtents();
+		GeoAPI.Geometries.IEnvelope GetExtents();
 
 		/// <summary>
 		/// Gets the connection ID of the datasource

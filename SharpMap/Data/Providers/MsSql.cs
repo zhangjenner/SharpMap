@@ -16,14 +16,11 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
 
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Text;
-using System.Data.SqlClient;
 using System.Data;
-using SharpMap.Data;
-using SharpMap.Data.Providers;
-using SharpMap.Converters.WellKnownBinary;
+using System.Data.SqlClient;
+
+using GeoAPI.Geometries;
 
 namespace SharpMap.Data.Providers
 {
@@ -176,9 +173,9 @@ namespace SharpMap.Data.Providers
 		/// </summary>
 		/// <param name="bbox"></param>
 		/// <returns></returns>
-		public Collection<Geometries.Geometry> GetGeometriesInView(SharpMap.Geometries.BoundingBox bbox)
+		public Collection<GeoAPI.Geometries.IGeometry> GetGeometriesInView(GeoAPI.Geometries.IEnvelope bbox)
 		{
-			Collection<Geometries.Geometry> features = new Collection<SharpMap.Geometries.Geometry>();
+			Collection<GeoAPI.Geometries.IGeometry> features = new Collection<GeoAPI.Geometries.IGeometry>();
 			using (SqlConnection conn = new SqlConnection(_ConnectionString))
 			{
 				string BoxIntersect = GetBoxClause(bbox);
@@ -198,7 +195,7 @@ namespace SharpMap.Data.Providers
 						{
 							if (dr[0] != DBNull.Value)
 							{
-								SharpMap.Geometries.Geometry geom = SharpMap.Converters.WellKnownBinary.GeometryFromWKB.Parse((byte[])dr[0]);
+								GeoAPI.Geometries.IGeometry geom = SharpMap.Converters.WellKnownBinary.GeometryFromWKB.Parse((byte[])dr[0]);
 								if (geom != null)
 									features.Add(geom);
 							}
@@ -215,9 +212,9 @@ namespace SharpMap.Data.Providers
 		/// </summary>
 		/// <param name="oid">Object ID</param>
 		/// <returns>geometry</returns>
-		public SharpMap.Geometries.Geometry GetGeometryByID(uint oid)
+		public GeoAPI.Geometries.IGeometry GetGeometryByID(uint oid)
 		{
-			SharpMap.Geometries.Geometry geom = null;
+			GeoAPI.Geometries.IGeometry geom = null;
 			using (SqlConnection conn = new SqlConnection(_ConnectionString))
 			{
 				string strSQL = "SELECT " + this.GeometryColumn + " AS Geom FROM " + this.Table + " WHERE " + this.ObjectIdColumn + "='" + oid.ToString() + "'";
@@ -242,7 +239,7 @@ namespace SharpMap.Data.Providers
 		/// </summary>
 		/// <param name="bbox"></param>
 		/// <returns></returns>
-		public Collection<uint> GetObjectIDsInView(SharpMap.Geometries.BoundingBox bbox)
+		public Collection<uint> GetObjectIDsInView(GeoAPI.Geometries.IEnvelope bbox)
 		{
 			Collection<uint> objectlist = new Collection<uint>();
 			using (SqlConnection conn = new SqlConnection(_ConnectionString))
@@ -280,7 +277,7 @@ namespace SharpMap.Data.Providers
 		/// </summary>
 		/// <param name="geom"></param>
 		/// <param name="ds">FeatureDataSet to fill data into</param>
-		public void ExecuteIntersectionQuery(SharpMap.Geometries.Geometry geom, FeatureDataSet ds)
+		public void ExecuteIntersectionQuery(GeoAPI.Geometries.IGeometry geom, FeatureDataSet ds)
 		{
 			throw new NotImplementedException();
 		}
@@ -389,9 +386,9 @@ namespace SharpMap.Data.Providers
 		/// Boundingbox of dataset
 		/// </summary>
 		/// <returns>boundingbox</returns>
-		public SharpMap.Geometries.BoundingBox GetExtents()
+		public GeoAPI.Geometries.IEnvelope GetExtents()
 		{
-			SharpMap.Geometries.BoundingBox box = null;
+			IEnvelope box = null;
 			using (SqlConnection conn = new SqlConnection(_ConnectionString))
 			{
 				string strSQL = "SELECT Min(Envelope_MinX) AS MinX, Min(Envelope_MinY) AS MinY, Max(Envelope_MaxX) AS MaxX, Max(Envelope_MaxY) AS MaxY FROM " + this.Table;
@@ -403,7 +400,7 @@ namespace SharpMap.Data.Providers
 					using (SqlDataReader dr = command.ExecuteReader())
 						if (dr.Read())
 						{
-							box = new SharpMap.Geometries.BoundingBox((float)dr[0], (float)dr[1], (float)dr[2], (float)dr[3]);
+                            box = SharpMap.Converters.Geometries.GeometryFactory.CreateEnvelope((float)dr[0], (float)dr[2], (float)dr[1], (float)dr[3]);
 						}
 					conn.Close();
 				}
@@ -419,11 +416,11 @@ namespace SharpMap.Data.Providers
 			get { return _ConnectionString; }
 		}
 
-		private string GetBoxClause(SharpMap.Geometries.BoundingBox bbox)
+		private string GetBoxClause(GeoAPI.Geometries.IEnvelope bbox)
 		{
 			return String.Format(SharpMap.Map.numberFormat_EnUS,
 				"(Envelope_MinX < {0} AND Envelope_MaxX > {1} AND Envelope_MinY < {2} AND Envelope_MaxY > {3})",
-				bbox.Max.X, bbox.Min.X, bbox.Max.Y, bbox.Min.Y);
+				bbox.MaxX, bbox.MinX, bbox.MaxY, bbox.MinY);
 		}
 
 		/// <summary>
@@ -431,7 +428,7 @@ namespace SharpMap.Data.Providers
 		/// </summary>
 		/// <param name="bbox">view box</param>
 		/// <param name="ds">FeatureDataSet to fill data into</param>
-		public void ExecuteIntersectionQuery(SharpMap.Geometries.BoundingBox bbox, SharpMap.Data.FeatureDataSet ds)
+		public void ExecuteIntersectionQuery(GeoAPI.Geometries.IEnvelope bbox, SharpMap.Data.FeatureDataSet ds)
 		{
 			//List<Geometries.Geometry> features = new List<SharpMap.Geometries.Geometry>();
 			using (SqlConnection conn = new SqlConnection(_ConnectionString))
@@ -574,11 +571,11 @@ namespace SharpMap.Data.Providers
 					if (feature.Geometry != null)
 					{
 						command.Parameters["@WKB_Geometry"].Value = feature.Geometry.AsBinary(); //Add the geometry as Well-Known Binary
-						SharpMap.Geometries.BoundingBox box = feature.Geometry.GetBoundingBox();
-						command.Parameters["@Envelope_MinX"].Value = box.Left;
-						command.Parameters["@Envelope_MinY"].Value = box.Bottom;
-						command.Parameters["@Envelope_MaxX"].Value = box.Right;
-						command.Parameters["@Envelope_MaxY"].Value = box.Top;
+						GeoAPI.Geometries.IEnvelope box = feature.Geometry.EnvelopeInternal;
+						command.Parameters["@Envelope_MinX"].Value = box.MinX;
+						command.Parameters["@Envelope_MinY"].Value = box.MinY;
+						command.Parameters["@Envelope_MaxX"].Value = box.MaxX;
+						command.Parameters["@Envelope_MaxY"].Value = box.MaxY;
 					}
 					else
 					{

@@ -439,12 +439,12 @@ namespace SharpMap.Data
 		internal FeatureDataRow(DataRowBuilder rb) : base(rb)
 		{
 		}
-		private SharpMap.Geometries.Geometry _Geometry;
+		private GeoAPI.Geometries.IGeometry _Geometry;
 
 		/// <summary>
 		/// The geometry of the current feature
 		/// </summary>
-		public SharpMap.Geometries.Geometry Geometry
+		public GeoAPI.Geometries.IGeometry Geometry
 		{
 			get { return _Geometry; }
 			set { _Geometry = value; }

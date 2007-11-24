@@ -22,6 +22,8 @@ using System.Drawing;
 using System.Data;
 using System.Text;
 using System.Windows.Forms;
+using GeoAPI.Geometries;
+using SharpMap.Converters.Geometries;
 
 namespace SharpMap.Forms
 {
@@ -177,7 +179,7 @@ namespace SharpMap.Forms
 		/// </summary>
 		/// <param name="WorldPos"></param>
 		/// <param name="ImagePos"></param>
-		public delegate void MouseEventHandler(SharpMap.Geometries.Point WorldPos, System.Windows.Forms.MouseEventArgs ImagePos);
+		public delegate void MouseEventHandler(ICoordinate WorldPos, System.Windows.Forms.MouseEventArgs ImagePos);
 		/// <summary>
 		/// Fires when mouse moves over the map
 		/// </summary>
@@ -229,7 +231,7 @@ namespace SharpMap.Forms
 		/// Eventtype fired when the center has changed
 		/// </summary>
 		/// <param name="center"></param>
-		public delegate void MapCenterChangedHandler(SharpMap.Geometries.Point center);
+		public delegate void MapCenterChangedHandler(ICoordinate center);
 		/// <summary>
 		/// Fired when the center of the map has changed
 		/// </summary>
@@ -310,7 +312,7 @@ namespace SharpMap.Forms
 			if (_Map != null)
 			{
 
-				SharpMap.Geometries.Point p = this._Map.ImageToWorld(new System.Drawing.Point(e.X, e.Y));
+				ICoordinate p = this._Map.ImageToWorld(new System.Drawing.Point(e.X, e.Y));
 
 				if (MouseMove != null)
 					MouseMove(p, e);
@@ -437,7 +439,8 @@ namespace SharpMap.Forms
 							if (_Map.Layers[_queryLayerIndex].GetType() == typeof(SharpMap.Layers.VectorLayer))
 							{
 								SharpMap.Layers.VectorLayer layer = _Map.Layers[_queryLayerIndex] as SharpMap.Layers.VectorLayer;
-								SharpMap.Geometries.BoundingBox bbox = this._Map.ImageToWorld(new System.Drawing.Point(e.X, e.Y)).GetBoundingBox().Grow(_Map.PixelSize * 5);
+                                IEnvelope bbox = GeometryFactory.CreatePoint(this._Map.ImageToWorld(new System.Drawing.Point(e.X, e.Y))).EnvelopeInternal;
+                                bbox.ExpandBy(_Map.PixelSize * 5);
 								SharpMap.Data.FeatureDataSet ds = new SharpMap.Data.FeatureDataSet();
 								layer.DataSource.Open();
 								layer.DataSource.ExecuteIntersectionQuery(bbox, ds);

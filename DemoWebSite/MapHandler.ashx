@@ -39,7 +39,7 @@ public class MapHandler : IHttpHandler
 			throw (new ArgumentException("Invalid map"));
 
 		//Set visible map extents
-		map.Center = new SharpMap.Geometries.Point(centerX, centerY);
+		map.Center = SharpMap.Converters.Geometries.GeometryFactory.CreateCoordinate(centerX, centerY);
 		map.Zoom = Zoom;
 		//Generate map
 		System.Drawing.Bitmap img = (System.Drawing.Bitmap)map.GetMap();

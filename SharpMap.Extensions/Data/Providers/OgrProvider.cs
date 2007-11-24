@@ -11,6 +11,8 @@ using System;
 using System.Collections.ObjectModel;
 using OSGeo.OGR;
 
+using GeoAPI.Geometries;
+
 namespace SharpMap.Data.Providers
 {
     /// <summary>
@@ -24,7 +26,7 @@ namespace SharpMap.Data.Providers
     public class Ogr : SharpMap.Data.Providers.IProvider, IDisposable
     {
 
-        private SharpMap.Geometries.BoundingBox _bbox;
+        private IEnvelope _bbox;
         private String m_Filename;
 
         private OSGeo.OGR.DataSource _OgrDataSource;
@@ -111,14 +113,15 @@ namespace SharpMap.Data.Providers
         /// Boundingbox of the dataset
         /// </summary>
         /// <returns>boundingbox</returns>
-        public SharpMap.Geometries.BoundingBox GetExtents()
+        public IEnvelope GetExtents()
         {
             if (this._bbox == null)
             {
                 OSGeo.OGR.Envelope _OgrEnvelope = new Envelope();
                 int i = _OgrLayer.GetExtent(_OgrEnvelope, 1);
 
-                this._bbox = new SharpMap.Geometries.BoundingBox(_OgrEnvelope.MinX,
+                this._bbox = SharpMap.Converters.Geometries.GeometryFactory.CreateEnvelope(
+                												 _OgrEnvelope.MinX,
                                                                  _OgrEnvelope.MinY,
                                                                  _OgrEnvelope.MaxX,
                                                                  _OgrEnvelope.MaxY);
@@ -193,7 +196,7 @@ namespace SharpMap.Data.Providers
         /// <param name="distance"></param>
         /// <returns></returns>
         [Obsolete("Use ExecuteIntersectionQuery instead")]
-        public FeatureDataTable QueryFeatures(SharpMap.Geometries.Geometry geom, double distance)
+        public FeatureDataTable QueryFeatures(IGeometry geom, double distance)
         {
             throw new NotImplementedException();
         }
@@ -203,7 +206,7 @@ namespace SharpMap.Data.Providers
         /// </summary>
         /// <param name="geom">Geometry</param>
         /// <returns>FeatureDataTable</returns>
-        public FeatureDataTable ExecuteIntersectionQuery(SharpMap.Geometries.Geometry geom)
+        public FeatureDataTable ExecuteIntersectionQuery(IGeometry geom)
         {
             FeatureDataSet fds = new FeatureDataSet();
             ExecuteIntersectionQuery(geom, fds);
@@ -259,7 +262,7 @@ namespace SharpMap.Data.Providers
         /// <param name="bbox">view box</param>
         /// <param name="ds">FeatureDataSet to fill data into</param>
         [Obsolete("Use ExecuteIntersectionQuery(BoundingBox,FeatureDataSet) instead")]
-        public void GetFeaturesInView(SharpMap.Geometries.BoundingBox bbox, FeatureDataSet ds)
+        public void GetFeaturesInView(IEnvelope bbox, FeatureDataSet ds)
         {
             ExecuteIntersectionQuery(bbox, ds);
         }
@@ -269,9 +272,9 @@ namespace SharpMap.Data.Providers
         /// </summary>
         /// <param name="bbox"></param>
         /// <returns></returns>
-        public Collection<uint> GetObjectIDsInView(SharpMap.Geometries.BoundingBox bbox)
+        public Collection<uint> GetObjectIDsInView(IEnvelope bbox)
         {
-            _OgrLayer.SetSpatialFilterRect(bbox.Min.X, bbox.Min.Y, bbox.Max.X, bbox.Max.Y);
+            _OgrLayer.SetSpatialFilterRect(bbox.MinX, bbox.MinY, bbox.MaxX, bbox.MaxY);
             OSGeo.OGR.Feature _OgrFeature = null;
             _OgrLayer.ResetReading();
 
@@ -290,7 +293,7 @@ namespace SharpMap.Data.Providers
         /// </summary>
         /// <param name="oid">Object ID</param>
         /// <returns>geometry</returns>
-        public SharpMap.Geometries.Geometry GetGeometryByID(uint oid)
+        public IGeometry GetGeometryByID(uint oid)
         {
             using (OSGeo.OGR.Feature _OgrFeature = _OgrLayer.GetFeature((int)oid))
                 return this.ParseOgrGeometry(_OgrFeature.GetGeometryRef());
@@ -301,11 +304,11 @@ namespace SharpMap.Data.Providers
         /// </summary>
         /// <param name="bbox"></param>
         /// <returns></returns>
-        public Collection<SharpMap.Geometries.Geometry> GetGeometriesInView(SharpMap.Geometries.BoundingBox bbox)
+        public Collection<IGeometry> GetGeometriesInView(IEnvelope bbox)
         {
-            Collection<SharpMap.Geometries.Geometry> geoms = new Collection<SharpMap.Geometries.Geometry>();
+            Collection<IGeometry> geoms = new Collection<IGeometry>();
 
-            _OgrLayer.SetSpatialFilterRect(bbox.Left, bbox.Bottom, bbox.Right, bbox.Top);
+            _OgrLayer.SetSpatialFilterRect(bbox.MinX, bbox.MinY, bbox.MaxX, bbox.MaxY);
             OSGeo.OGR.Feature _OgrFeature = null;
 
             _OgrLayer.ResetReading();
@@ -334,11 +337,11 @@ namespace SharpMap.Data.Providers
         /// </summary>
         /// <param name="bbox">Geometry to intersect with</param>
         /// <param name="ds">FeatureDataSet to fill data into</param>
-        public void ExecuteIntersectionQuery(SharpMap.Geometries.BoundingBox bbox, FeatureDataSet ds)
+        public void ExecuteIntersectionQuery(IEnvelope bbox, FeatureDataSet ds)
         {
             FeatureDataTable myDt = new FeatureDataTable();
 
-            _OgrLayer.SetSpatialFilterRect(bbox.Left, bbox.Bottom, bbox.Right, bbox.Top);
+            _OgrLayer.SetSpatialFilterRect(bbox.MinX, bbox.MinY, bbox.MaxX, bbox.MaxY);
 
             //reads the column definition of the layer/feature
             this.ReadColumnDefinition(myDt, _OgrLayer);
@@ -371,7 +374,7 @@ namespace SharpMap.Data.Providers
         /// </summary>
         /// <param name="geom">Geometry to intersect with</param>
         /// <param name="ds">FeatureDataSet to fill data into</param>
-        public void ExecuteIntersectionQuery(SharpMap.Geometries.Geometry geom, FeatureDataSet ds)
+        public void ExecuteIntersectionQuery(IGeometry geom, FeatureDataSet ds)
         {
             throw new NotImplementedException();
         }
@@ -457,7 +460,7 @@ namespace SharpMap.Data.Providers
             }
         }
 
-        private SharpMap.Geometries.Geometry ParseOgrGeometry(OSGeo.OGR.Geometry OgrGeometry)
+        private IGeometry ParseOgrGeometry(OSGeo.OGR.Geometry OgrGeometry)
         {
             byte[] wkbBuffer = new byte[OgrGeometry.WkbSize()];
             int i = OgrGeometry.ExportToWkb(wkbBuffer);

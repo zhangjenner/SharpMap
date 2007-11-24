@@ -19,7 +19,8 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Text;
-
+using GeoAPI.Geometries;
+using NTS = GisSharpBlog.NetTopologySuite;
 
 namespace SharpMap
 {
@@ -78,6 +79,9 @@ namespace SharpMap
 		/// <param name="size">Size of map in pixels</param>
 		public Map(System.Drawing.Size size)
 		{
+            IEnvelope env1 = new NTS.Geometries.Envelope(0, 10, 0, 10);
+            NTS.Geometries.Envelope env2 = new NTS.Geometries.Envelope(0, 10, 0, 10);
+
 			this.Size = size;
             this.Layers = new SharpMap.Layers.LayerCollection();
 			this.BackColor = System.Drawing.Color.Transparent;
@@ -85,7 +89,7 @@ namespace SharpMap
 			this._MinimumZoom = 0;
 			_MapTransform = new System.Drawing.Drawing2D.Matrix();
 			MapTransformInverted = new System.Drawing.Drawing2D.Matrix();
-			_Center = new SharpMap.Geometries.Point(0, 0);
+			_Center = SharpMap.Converters.Geometries.GeometryFactory.CreateCoordinate(0, 0);
 			_Zoom = 1;
 			_PixelAspectRatio = 1.0;
 		}		
@@ -206,12 +210,12 @@ namespace SharpMap
 		/// the bounding box, thus making the resulting envelope larger!
 		/// </remarks>
 		/// <param name="bbox"></param>
-		public void ZoomToBox(SharpMap.Geometries.BoundingBox bbox)
+		public void ZoomToBox(GeoAPI.Geometries.IEnvelope bbox)
 		{
 			this._Zoom = bbox.Width; //Set the private center value so we only fire one MapOnViewChange event
 			if (this.Envelope.Height < bbox.Height)
 				this._Zoom *= bbox.Height / this.Envelope.Height;
-			this.Center = bbox.GetCentroid();			
+			this.Center = bbox.Centre;			
 		}
 
 		/// <summary>
@@ -220,7 +224,7 @@ namespace SharpMap
 		/// </summary>
 		/// <param name="p">Point in world coordinates</param>
 		/// <returns>Point in image coordinates</returns>
-		public System.Drawing.PointF WorldToImage(SharpMap.Geometries.Point p)
+		public System.Drawing.PointF WorldToImage(ICoordinate p)
 		{
 			return Utilities.Transform.WorldtoMap(p, this);
 		}
@@ -230,7 +234,7 @@ namespace SharpMap
 		/// </summary>
 		/// <param name="p">Point in image coordinates</param>
 		/// <returns>Point in world coordinates</returns>
-		public SharpMap.Geometries.Point ImageToWorld(System.Drawing.PointF p)
+		public ICoordinate ImageToWorld(System.Drawing.PointF p)
 		{
 			return Utilities.Transform.MapToWorld(p, this);
 		}
@@ -242,12 +246,13 @@ namespace SharpMap
 		/// <summary>
 		/// Gets the extents of the current map based on the current zoom, center and mapsize
 		/// </summary>
-		public SharpMap.Geometries.BoundingBox Envelope
+		public GeoAPI.Geometries.IEnvelope Envelope
 		{
-			get {
-				return new SharpMap.Geometries.BoundingBox(
-					new SharpMap.Geometries.Point(this.Center.X - this.Zoom * .5, this.Center.Y - this.MapHeight * .5),
-					new SharpMap.Geometries.Point(this.Center.X + this.Zoom * .5, this.Center.Y + this.MapHeight * .5));
+			get { return SharpMap.Converters.Geometries.GeometryFactory.CreateEnvelope(
+                                                                        this.Center.X - this.Zoom * .5,
+                                                                        this.Center.X + this.Zoom * .5, 
+                                                                        this.Center.Y - this.MapHeight * .5,
+			                                                            this.Center.Y + this.MapHeight * .5);
 			}
 		}
 
@@ -322,12 +327,12 @@ namespace SharpMap
 			}
 		}
 	
-		private SharpMap.Geometries.Point _Center;
+		private ICoordinate _Center;
 
 		/// <summary>
 		/// Center of map in WCS
 		/// </summary>
-		public SharpMap.Geometries.Point Center
+		public ICoordinate Center
 		{
 			get { return _Center; }
 			set {
@@ -365,17 +370,17 @@ namespace SharpMap
 		/// Gets the extents of the map based on the extents of all the layers in the layers collection
 		/// </summary>
 		/// <returns>Full map extents</returns>
-		public SharpMap.Geometries.BoundingBox GetExtents()
+		public GeoAPI.Geometries.IEnvelope GetExtents()
 		{
 			if (this.Layers == null || this.Layers.Count == 0)
 				throw (new InvalidOperationException("No layers to zoom to"));
-			SharpMap.Geometries.BoundingBox bbox = null;
+			GeoAPI.Geometries.IEnvelope bbox = null;
 			for (int i = 0; i < this.Layers.Count; i++)
 			{
 				if (bbox == null)
 					bbox = this.Layers[i].Envelope;
 				else
-					bbox = bbox.Join(this.Layers[i].Envelope);
+					bbox.ExpandToInclude(this.Layers[i].Envelope);
 			}
 			return bbox;
 		}	

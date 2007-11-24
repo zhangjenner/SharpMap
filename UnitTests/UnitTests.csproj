@@ -45,6 +45,10 @@
   </Target>
   -->
   <ItemGroup>
+    <Reference Include="GeoAPI, Version=1.1.0.0, Culture=neutral, PublicKeyToken=a1a0da7def465678, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\NTS_1.7.3_RC2_BIN\GeoAPI.dll</HintPath>
+    </Reference>
     <Reference Include="nunit.framework, Version=2.4.1.0, Culture=neutral, PublicKeyToken=96d09a1eb7f44a77, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\ExternalReferences\nunit.framework.dll</HintPath>
@@ -55,10 +59,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\SharpMap.Extensions\SharpMap.Extensions.csproj">
-      <Project>{A4140C12-53F5-438C-8D24-9E48C504FECF}</Project>
-      <Name>SharpMap.Extensions</Name>
-    </ProjectReference>
     <ProjectReference Include="..\SharpMap\SharpMap.csproj">
       <Project>{C9AFC8FB-F41C-4308-9C57-6EEFFDF005B3}</Project>
       <Name>SharpMap</Name>
@@ -67,13 +67,10 @@
   <ItemGroup>
     <Compile Include="Converters\WKB\WKBTests.cs" />
     <Compile Include="Converters\WKT\WktGeometryTests.cs" />
-    <Compile Include="Data\Providers\DataTablePointTests.cs" />
-    <Compile Include="Geometries\BoundingBoxTests.cs" />
-    <Compile Include="Geometries\LinestringTests.cs" />
-    <Compile Include="Geometries\MultiLinestringsTests.cs" />
-    <Compile Include="Geometries\PointTests.cs" />
-    <Compile Include="Geometries\PolygonTests.cs" />
     <Compile Include="MapTest.cs" />
     <Compile Include="TestWmsCapabilityParser.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Data\Providers\" />
   </ItemGroup>
 </Project>

@@ -21,6 +21,7 @@ using System.Collections.ObjectModel;
 using System.Text;
 using System.Drawing.Imaging;
 using System.Drawing;
+using GeoAPI.Geometries;
 
 namespace SharpMap.Layers
 {
@@ -420,7 +421,7 @@ namespace SharpMap.Layers
 		/// <param name="box">Area the WMS request should cover</param>
 		/// <param name="size">Size of image</param>
 		/// <returns>URL for WMS request</returns>
-		public string GetRequestUrl(SharpMap.Geometries.BoundingBox box, System.Drawing.Size size)
+		public string GetRequestUrl(IEnvelope box, System.Drawing.Size size)
 		{
 			SharpMap.Web.Wms.Client.WmsOnlineResource resource = GetPreferredMethod();			
 			System.Text.StringBuilder strReq = new StringBuilder(resource.OnlineResource);
@@ -430,7 +431,7 @@ namespace SharpMap.Layers
 				strReq.Append("&");
 
 			strReq.AppendFormat(SharpMap.Map.numberFormat_EnUS, "REQUEST=GetMap&BBOX={0},{1},{2},{3}",
-				box.Min.X, box.Min.Y, box.Max.X, box.Max.Y);
+				box.MinX, box.MinY, box.MaxX, box.MaxY);
 			strReq.AppendFormat("&WIDTH={0}&Height={1}", size.Width, size.Height);
 			strReq.Append("&Layers=");
 			if (_LayerList != null && _LayerList.Count > 0)
@@ -461,7 +462,7 @@ namespace SharpMap.Layers
 		/// Returns the extent of the layer
 		/// </summary>
 		/// <returns>Bounding box corresponding to the extent of the features in the layer</returns>
-		public override SharpMap.Geometries.BoundingBox Envelope
+		public override IEnvelope Envelope
 		{
 			get
 			{

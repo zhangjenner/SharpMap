@@ -19,7 +19,8 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Text;
-using SharpMap.Geometries;
+
+using GeoAPI.Geometries;
 
 namespace SharpMap.Layers
 {
@@ -144,7 +145,7 @@ namespace SharpMap.Layers
 				throw (new ApplicationException("Cannot render map. View center not specified"));
 
 			g.SmoothingMode = this.SmoothingMode;
-			SharpMap.Geometries.BoundingBox envelope = map.Envelope; //View to render
+			IEnvelope envelope = map.Envelope; //View to render
 			if (this.CoordinateTransformation != null)
 				envelope = SharpMap.CoordinateSystems.Transformations.GeometryTransform.TransformBox(envelope, this.CoordinateTransformation.MathTransform.Inverse());
 			
@@ -176,17 +177,17 @@ namespace SharpMap.Layers
 					{
 						SharpMap.Data.FeatureDataRow feature = features[i];
 						//Draw background of all line-outlines first
-						if(feature.Geometry is SharpMap.Geometries.LineString)
+						if(feature.Geometry is GeoAPI.Geometries.ILineString)
 						{
 								SharpMap.Styles.VectorStyle outlinestyle1 = this.Theme.GetStyle(feature) as SharpMap.Styles.VectorStyle;
 								if (outlinestyle1.Enabled && outlinestyle1.EnableOutline)
-									SharpMap.Rendering.VectorRenderer.DrawLineString(g, feature.Geometry as LineString, outlinestyle1.Outline, map);
+									SharpMap.Rendering.VectorRenderer.DrawLineString(g, feature.Geometry as ILineString, outlinestyle1.Outline, map);
 						}
-						else if(feature.Geometry is SharpMap.Geometries.MultiLineString)
+						else if(feature.Geometry is GeoAPI.Geometries.IMultiLineString)
 						{
 								SharpMap.Styles.VectorStyle outlinestyle2 = this.Theme.GetStyle(feature) as SharpMap.Styles.VectorStyle;
 								if (outlinestyle2.Enabled && outlinestyle2.EnableOutline)
-									SharpMap.Rendering.VectorRenderer.DrawMultiLineString(g, feature.Geometry as MultiLineString, outlinestyle2.Outline, map);
+									SharpMap.Rendering.VectorRenderer.DrawMultiLineString(g, feature.Geometry as IMultiLineString, outlinestyle2.Outline, map);
 						}
 					}
 				}
@@ -202,7 +203,7 @@ namespace SharpMap.Layers
 			{
 				this.DataSource.Open();
 
-				Collection<SharpMap.Geometries.Geometry> geoms = this.DataSource.GetGeometriesInView(envelope);
+				Collection<GeoAPI.Geometries.IGeometry> geoms = this.DataSource.GetGeometriesInView(envelope);
 				this.DataSource.Close();
 
 				if (this.CoordinateTransformation != null)
@@ -213,18 +214,19 @@ namespace SharpMap.Layers
 				//before drawing the "inline" on top.
 				if (this.Style.EnableOutline)
 				{
-					foreach (SharpMap.Geometries.Geometry geom in geoms)
+					foreach (GeoAPI.Geometries.IGeometry geom in geoms)
 					{
 						if (geom != null)
 						{
 							//Draw background of all line-outlines first
-							switch (geom.GetType().FullName)
+                            
+							switch (geom.GeometryType)
 							{
-								case "SharpMap.Geometries.LineString":
-									SharpMap.Rendering.VectorRenderer.DrawLineString(g, geom as LineString, this.Style.Outline, map);
+								case "LineString":
+									SharpMap.Rendering.VectorRenderer.DrawLineString(g, geom as ILineString, this.Style.Outline, map);
 									break;
-								case "SharpMap.Geometries.MultiLineString":
-									SharpMap.Rendering.VectorRenderer.DrawMultiLineString(g, geom as MultiLineString, this.Style.Outline, map);
+								case "MultiLineString":
+									SharpMap.Rendering.VectorRenderer.DrawMultiLineString(g, geom as IMultiLineString, this.Style.Outline, map);
 									break;
 								default:
 									break;
@@ -236,7 +238,7 @@ namespace SharpMap.Layers
 				for (int i = 0; i < geoms.Count; i++)
 				{
 					if(geoms[i]!=null)
-						RenderGeometry(g, map, geoms[i], this.Style);
+						RenderGeometry(g, map, (geoms[i] as IGeometry), this.Style);
 				}
 			}
 
@@ -244,41 +246,41 @@ namespace SharpMap.Layers
 			base.Render(g, map);
 		}
 
-		private void RenderGeometry(System.Drawing.Graphics g, Map map, Geometry feature, SharpMap.Styles.VectorStyle style)
+		private void RenderGeometry(System.Drawing.Graphics g, Map map, GeoAPI.Geometries.IGeometry feature, SharpMap.Styles.VectorStyle style)
 		{
-			switch (feature.GetType().FullName)
-			{
-				case "SharpMap.Geometries.Polygon":
-					if (style.EnableOutline)
-						SharpMap.Rendering.VectorRenderer.DrawPolygon(g, (Polygon)feature, style.Fill, style.Outline, _ClippingEnabled, map);
-					else
-						SharpMap.Rendering.VectorRenderer.DrawPolygon(g, (Polygon)feature, style.Fill, null, _ClippingEnabled, map);
-					break;
-				case "SharpMap.Geometries.MultiPolygon":
-					if (style.EnableOutline)
-						SharpMap.Rendering.VectorRenderer.DrawMultiPolygon(g, (MultiPolygon)feature, style.Fill, style.Outline, _ClippingEnabled, map);
-					else
-						SharpMap.Rendering.VectorRenderer.DrawMultiPolygon(g, (MultiPolygon)feature, style.Fill, null, _ClippingEnabled, map);
-					break;
-				case "SharpMap.Geometries.LineString":
-					SharpMap.Rendering.VectorRenderer.DrawLineString(g, (LineString)feature, style.Line, map);
-					break;
-				case "SharpMap.Geometries.MultiLineString":
-					SharpMap.Rendering.VectorRenderer.DrawMultiLineString(g, (MultiLineString)feature, style.Line, map);
-					break;
-				case "SharpMap.Geometries.Point":
-					SharpMap.Rendering.VectorRenderer.DrawPoint(g, (Point)feature, style.Symbol, style.SymbolScale, style.SymbolOffset, style.SymbolRotation, map);
-					break;
-				case "SharpMap.Geometries.MultiPoint":
-					SharpMap.Rendering.VectorRenderer.DrawMultiPoint(g, (MultiPoint)feature, style.Symbol, style.SymbolScale, style.SymbolOffset, style.SymbolRotation, map);
-					break;
-				case "SharpMap.Geometries.GeometryCollection":
-					foreach(Geometries.Geometry geom in (GeometryCollection)feature)
-						RenderGeometry(g, map, geom, style);
-					break;
-				default:
-					break;
-			}
+            switch (feature.GeometryType)
+            {
+                case "Polygon":
+                    if (style.EnableOutline)
+                        SharpMap.Rendering.VectorRenderer.DrawPolygon(g, (IPolygon)feature, style.Fill, style.Outline, _ClippingEnabled, map);
+                    else
+                        SharpMap.Rendering.VectorRenderer.DrawPolygon(g, (IPolygon)feature, style.Fill, null, _ClippingEnabled, map);
+                    break;
+                case "MultiPolygon":
+                    if (style.EnableOutline)
+                        SharpMap.Rendering.VectorRenderer.DrawMultiPolygon(g, (IMultiPolygon)feature, style.Fill, style.Outline, _ClippingEnabled, map);
+                    else
+                        SharpMap.Rendering.VectorRenderer.DrawMultiPolygon(g, (IMultiPolygon)feature, style.Fill, null, _ClippingEnabled, map);
+                    break;
+                case "LineString":
+                    SharpMap.Rendering.VectorRenderer.DrawLineString(g, (ILineString)feature, style.Line, map);
+                    break;
+                case "MultiLineString":
+                    SharpMap.Rendering.VectorRenderer.DrawMultiLineString(g, (IMultiLineString)feature, style.Line, map);
+                    break;
+                case "Point":
+                    SharpMap.Rendering.VectorRenderer.DrawPoint(g, (IPoint)feature, style.Symbol, style.SymbolScale, style.SymbolOffset, style.SymbolRotation, map);
+                    break;
+                case "MultiPoint":
+                    SharpMap.Rendering.VectorRenderer.DrawMultiPoint(g, (IMultiPoint)feature, style.Symbol, style.SymbolScale, style.SymbolOffset, style.SymbolRotation, map);
+                    break;
+                case "GeometryCollection":
+                    foreach (IGeometry geom in (IGeometryCollection)feature)
+                        RenderGeometry(g, map, geom, style);
+                    break;
+                default:
+                    break;
+            }
 		}
 
 
@@ -286,7 +288,7 @@ namespace SharpMap.Layers
 		/// Returns the extent of the layer
 		/// </summary>
 		/// <returns>Bounding box corresponding to the extent of the features in the layer</returns>
-		public override BoundingBox Envelope
+		public override GeoAPI.Geometries.IEnvelope Envelope
 		{
 			get
 			{
@@ -296,7 +298,7 @@ namespace SharpMap.Layers
 				bool wasOpen = this.DataSource.IsOpen;
 				if (!wasOpen)
 					this.DataSource.Open();
-				SharpMap.Geometries.BoundingBox box = this.DataSource.GetExtents();
+				GeoAPI.Geometries.IEnvelope box = this.DataSource.GetExtents();
 				if (!wasOpen) //Restore state
 					this.DataSource.Close();
 				if (this.CoordinateTransformation != null)

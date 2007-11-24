@@ -5,12 +5,12 @@ using System.Runtime.InteropServices;
 // Allgemeine Informationen über eine Assembly werden über die folgenden 
 // Attribute gesteuert. Ändern Sie diese Attributwerte, um die Informationen zu ändern,
 // die mit einer Assembly verknüpft sind.
-[assembly: AssemblyTitle("SharpMap Engine")]
-[assembly: AssemblyDescription("SharpMap v0.9")]
+[assembly: AssemblyTitle("SharpMap Extensions")]
+[assembly: AssemblyDescription("SharpMap Extensions v0.9.5")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("iter.dk")]
+[assembly: AssemblyCompany("http://www.codeplex.com/SharpMap")]
 [assembly: AssemblyProduct("SharpMap.Extensions")]
-[assembly: AssemblyCopyright("Copyright © 2006 Christian Gräfe")]
+[assembly: AssemblyCopyright("Copyright © 2007 Christian Gräfe")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -32,4 +32,4 @@ using System.Runtime.InteropServices;
 // Sie können alle Werte angeben oder die standardmäßigen Revisions- und Buildnummern 
 // übernehmen, indem Sie "*" eingeben:
 [assembly: AssemblyVersion("0.9.*")]
-[assembly: AssemblyFileVersion("0.9.0.0")]
+[assembly: AssemblyFileVersion("0.9.5.0")]

@@ -18,21 +18,16 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Configuration;
-using System.Data;
 using System.Drawing;
 using System.IO;
-using System.Text;
 using System.Windows.Forms;
 
-using GeoPoint = SharpMap.Geometries.Point;
-using SharpMap.Geometries;
-using SharpMap.Layers;
-using SharpMap.Forms;
-using SharpMap.Data.Providers;
-
 using DemoWinForm.Properties;
+using GeoAPI.Geometries;
+using SharpMap.Converters.Geometries;
+using SharpMap.Data.Providers;
+using SharpMap.Forms;
+using SharpMap.Layers;
 
 namespace DemoWinForm
 {
@@ -91,7 +86,7 @@ namespace DemoWinForm
 		private void addNewRandomGeometryLayer()
 		{
 			Random rndGen = new Random();
-			Collection<Geometry> geometry = new Collection<Geometry>();
+			Collection<IGeometry> geometry = new Collection<IGeometry>();
 
 			VectorLayer layer = new VectorLayer(String.Empty);
 			
@@ -158,60 +153,57 @@ namespace DemoWinForm
 			return Color.FromArgb(rndGen.Next(255), rndGen.Next(255), rndGen.Next(255));
 		}
 
-		private void generatePolygons(Collection<Geometry> geometry, Random rndGen)
+		private void generatePolygons(Collection<IGeometry> geometry, Random rndGen)
 		{
 			int numPolygons = rndGen.Next(10, 100);
 			for (int polyIndex = 0; polyIndex < numPolygons; polyIndex++)
 			{
-				Polygon polygon = new Polygon();
-				Collection<GeoPoint> verticies = new Collection<GeoPoint>();
-				GeoPoint upperLeft = new GeoPoint(rndGen.NextDouble() * 1000, rndGen.NextDouble() * 1000);
+				
+				List<ICoordinate> verticies = new List<ICoordinate>();
+				ICoordinate upperLeft = GeometryFactory.CreateCoordinate(rndGen.NextDouble() * 1000, rndGen.NextDouble() * 1000);
 				double sideLength = rndGen.NextDouble() * 50;
 
 				// Make a square
 				verticies.Add(upperLeft);
-				verticies.Add(new GeoPoint(upperLeft.X + sideLength, upperLeft.Y));
-				verticies.Add(new GeoPoint(upperLeft.X + sideLength, upperLeft.Y - sideLength));
-				verticies.Add(new GeoPoint(upperLeft.X, upperLeft.Y - sideLength));
-				polygon.ExteriorRing = new LinearRing(verticies);
+				verticies.Add(GeometryFactory.CreateCoordinate(upperLeft.X + sideLength, upperLeft.Y));
+				verticies.Add(GeometryFactory.CreateCoordinate(upperLeft.X + sideLength, upperLeft.Y - sideLength));
+				verticies.Add(GeometryFactory.CreateCoordinate(upperLeft.X, upperLeft.Y - sideLength));
 
-				geometry.Add(polygon);
+				geometry.Add(GeometryFactory.CreatePolygon(GeometryFactory.CreateLinearRing(verticies.ToArray()), null));
 			}
 		}
 
-		private void generateLines(Collection<Geometry> geometry, Random rndGen)
+		private void generateLines(Collection<IGeometry> geometry, Random rndGen)
 		{
 			int numLines = rndGen.Next(10, 100);
 			for (int lineIndex = 0; lineIndex < numLines; lineIndex++)
 			{
-				LineString line = new LineString();
-				Collection<GeoPoint> verticies = new Collection<GeoPoint>();
+				//LineString line = new LineString();
+				List<ICoordinate> verticies = new List<ICoordinate>();
 				
 				int numVerticies = rndGen.Next(4, 15);
 
-				GeoPoint lastPoint = new GeoPoint(rndGen.NextDouble() * 1000, rndGen.NextDouble() * 1000);
+				ICoordinate lastPoint = GeometryFactory.CreateCoordinate(rndGen.NextDouble() * 1000, rndGen.NextDouble() * 1000);
 				verticies.Add(lastPoint);
 				
 				for (int vertexIndex = 0; vertexIndex < numVerticies; vertexIndex++)
 				{
-					GeoPoint nextPoint = new GeoPoint(lastPoint.X + rndGen.Next(-50, 50), lastPoint.Y + rndGen.Next(-50, 50));
+					ICoordinate nextPoint = GeometryFactory.CreateCoordinate(lastPoint.X + rndGen.Next(-50, 50), lastPoint.Y + rndGen.Next(-50, 50));
 					verticies.Add(nextPoint);
 
 					lastPoint = nextPoint;
 				}
 
-				line.Vertices = verticies;
-
-				geometry.Add(line);
+				geometry.Add(GeometryFactory.CreateLineString(verticies.ToArray()));
 			}
 		}
 
-		private void generatePoints(Collection<Geometry> geometry, Random rndGen)
+		private void generatePoints(Collection<IGeometry> geometry, Random rndGen)
 		{
 			int numPoints = rndGen.Next(10, 100);
 			for (int pointIndex = 0; pointIndex < numPoints; pointIndex++)
 			{
-				GeoPoint point = new GeoPoint(rndGen.NextDouble() * 1000, rndGen.NextDouble() * 1000);
+				IPoint point = GeometryFactory.CreatePoint(rndGen.NextDouble() * 1000, rndGen.NextDouble() * 1000);
 				geometry.Add(point);
 			}
 		}
@@ -435,7 +427,7 @@ namespace DemoWinForm
 			});
 		}
 
-		private void MainMapImage_MouseMove(SharpMap.Geometries.Point WorldPos, MouseEventArgs ImagePos)
+		private void MainMapImage_MouseMove(ICoordinate WorldPos, MouseEventArgs ImagePos)
 		{
 			CoordinatesLabel.Text = String.Format("Coordinates: {0:N5}, {1:N5}", WorldPos.X, WorldPos.Y);
 		}

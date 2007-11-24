@@ -23,6 +23,8 @@ using System.ComponentModel;
 using System.Runtime;
 using System.Text;
 
+using GeoAPI.Geometries;
+
 // more info at http://sf.net/projects/pgsqlclient
 using PostgreSql.Data.PostgreSqlClient;
 using PostgreSql.Data.PgTypes;
@@ -181,9 +183,9 @@ namespace SharpMap.Data.Providers
         /// </summary>
         /// <param name="bbox"></param>
         /// <returns></returns>
-        public Collection<Geometries.Geometry> GetGeometriesInView(SharpMap.Geometries.BoundingBox bbox)
+        public Collection<IGeometry> GetGeometriesInView(IEnvelope bbox)
         {
-            Collection<Geometries.Geometry> features = new Collection<SharpMap.Geometries.Geometry>();
+            Collection<IGeometry> features = new Collection<IGeometry>();
             using (PgConnection conn = new PgConnection(_ConnectionString))
             {
                 string strBbox = GetBoundingBoxSql(bbox, this.SRID);
@@ -205,7 +207,7 @@ namespace SharpMap.Data.Providers
                         while (dr.Read())
                         {
                             //object obj = dr[0];
-                            SharpMap.Geometries.Geometry geom = null;
+                            IGeometry geom = null;
 
                             //							if ( typeof(PgPoint) == obj.GetType() )
                             //								geom = new SharpMap.Geometries.Point( ((PgPoint)obj).X, ((PgPoint)obj).Y );
@@ -230,9 +232,9 @@ namespace SharpMap.Data.Providers
         /// </summary>
         /// <param name="oid">Object ID</param>
         /// <returns>geometry</returns>
-        public SharpMap.Geometries.Geometry GetGeometryByID(uint oid)
+        public IGeometry GetGeometryByID(uint oid)
         {
-            SharpMap.Geometries.Geometry geom = null;
+            IGeometry geom = null;
             using (PgConnection conn = new PgConnection(_ConnectionString))
             {
                 String strSql = String.Format("SELECT AsBinary({0}) As Geom FROM {1} WHERE {2} = '{3}'",
@@ -250,7 +252,7 @@ namespace SharpMap.Data.Providers
                         {
                             object obj = dr[0];
                             if (typeof(PgPoint) == obj.GetType())
-                                geom = new SharpMap.Geometries.Point(((PgPoint)obj).X, ((PgPoint)obj).Y);
+                                geom = SharpMap.Converters.Geometries.GeometryFactory.CreatePoint(((PgPoint)obj).X, ((PgPoint)obj).Y);
                             else if (obj != DBNull.Value)
                                 geom = SharpMap.Converters.WellKnownBinary.GeometryFromWKB.Parse((byte[])dr[0]);
                         }
@@ -265,7 +267,7 @@ namespace SharpMap.Data.Providers
         /// </summary>
         /// <param name="bbox"></param>
         /// <returns></returns>
-        public Collection<uint> GetObjectIDsInView(SharpMap.Geometries.BoundingBox bbox)
+        public Collection<uint> GetObjectIDsInView(IEnvelope bbox)
         {
             Collection<uint> objectlist = new Collection<uint>();
             using (PgConnection conn = new PgConnection(_ConnectionString))
@@ -306,9 +308,9 @@ namespace SharpMap.Data.Providers
         /// <param name="distance"></param>
         /// <returns></returns>
         [Obsolete("Use ExecuteIntersectionQuery instead")]
-        public SharpMap.Data.FeatureDataTable QueryFeatures(SharpMap.Geometries.Geometry geom, double distance)
+        public SharpMap.Data.FeatureDataTable QueryFeatures(IGeometry geom, double distance)
         {
-            Collection<Geometries.Geometry> features = new Collection<SharpMap.Geometries.Geometry>();
+            Collection<IGeometry> features = new Collection<IGeometry>();
             using (PgConnection conn = new PgConnection(_ConnectionString))
             {
                 string strGeom = "GeomFromText('" + geom.AsText() + "')";
@@ -356,9 +358,9 @@ namespace SharpMap.Data.Providers
         /// </summary>
         /// <param name="geom"></param>
         /// <param name="ds">FeatureDataSet to fill data into</param>
-        public void ExecuteIntersectionQuery(SharpMap.Geometries.Geometry geom, FeatureDataSet ds)
+        public void ExecuteIntersectionQuery(IGeometry geom, FeatureDataSet ds)
         {
-            //List<Geometries.Geometry> features = new List<SharpMap.Geometries.Geometry>();
+            //List<IGeometry> features = new List<IGeometry>();
             using (PgConnection conn = new PgConnection(_ConnectionString))
             {
                 string strGeom = "GeomFromText('" + geom.AsText() + "')";
@@ -473,7 +475,7 @@ namespace SharpMap.Data.Providers
 				//                        col.DataType = typeof(bool);
 				//                        break;
 				//                    case "geometry":
-				//                        col.DataType = typeof(SharpMap.Geometries.Geometry);
+				//                        col.DataType = typeof(IGeometry);
 				//                        break;
 				//                    default:
 				//                        col.DataType = typeof(object);
@@ -603,7 +605,7 @@ namespace SharpMap.Data.Providers
         /// Boundingbox of dataset
         /// </summary>
         /// <returns>boundingbox</returns>
-        public SharpMap.Geometries.BoundingBox GetExtents()
+        public IEnvelope GetExtents()
         {
             using (PgConnection conn = new PgConnection(_ConnectionString))
             {
@@ -621,11 +623,11 @@ namespace SharpMap.Data.Providers
                 {
                     conn.Open();
 
-                    SharpMap.Geometries.BoundingBox bbox = null;
+                    IEnvelope bbox = null;
                     try
                     {
                         PostgreSql.Data.PgTypes.PgBox2D result = (PostgreSql.Data.PgTypes.PgBox2D)command.ExecuteScalar();
-                        bbox = new SharpMap.Geometries.BoundingBox(result.LowerLeft.X, result.LowerLeft.Y, result.UpperRight.X, result.UpperRight.Y);
+                        bbox = SharpMap.Converters.Geometries.GeometryFactory.CreateEnvelope(result.LowerLeft.X, result.UpperRight.X, result.LowerLeft.Y, result.UpperRight.Y);
                     }
                     catch (System.Exception ex)
                     {
@@ -655,7 +657,7 @@ namespace SharpMap.Data.Providers
         /// <param name="bbox">view box</param>
         /// <param name="ds">FeatureDataSet to fill data into</param>
         [Obsolete("Use ExecuteIntersectionQuery")]
-        public void GetFeaturesInView(SharpMap.Geometries.BoundingBox bbox, SharpMap.Data.FeatureDataSet ds)
+        public void GetFeaturesInView(IEnvelope bbox, SharpMap.Data.FeatureDataSet ds)
         {
             ExecuteIntersectionQuery(bbox, ds);
         }
@@ -665,7 +667,7 @@ namespace SharpMap.Data.Providers
         /// </summary>
         /// <param name="bbox">view box</param>
         /// <param name="ds">FeatureDataSet to fill data into</param>
-        public void ExecuteIntersectionQuery(SharpMap.Geometries.BoundingBox bbox, SharpMap.Data.FeatureDataSet ds)
+        public void ExecuteIntersectionQuery(IEnvelope bbox, SharpMap.Data.FeatureDataSet ds)
         {
             using (PgConnection conn = new PgConnection(_ConnectionString))
             {
@@ -717,13 +719,13 @@ namespace SharpMap.Data.Providers
         /// <param name="bbox">Bounding Box</param>
         /// <param name="iSRID">Spatial Reference Id</param>
         /// <returns>String</returns>
-        private static string GetBoundingBoxSql(SharpMap.Geometries.BoundingBox bbox, int iSRID)
+        private static string GetBoundingBoxSql(IEnvelope bbox, int iSRID)
         {
             string strBbox = String.Format("box2d('BOX3D({0} {1},{2} {3})'::box3d)",
-                                bbox.Min.X.ToString(SharpMap.Map.numberFormat_EnUS),
-                                bbox.Min.Y.ToString(SharpMap.Map.numberFormat_EnUS),
-                                bbox.Max.X.ToString(SharpMap.Map.numberFormat_EnUS),
-                                bbox.Max.Y.ToString(SharpMap.Map.numberFormat_EnUS));
+                                bbox.MinX.ToString(SharpMap.Map.numberFormat_EnUS),
+                                bbox.MinY.ToString(SharpMap.Map.numberFormat_EnUS),
+                                bbox.MaxX.ToString(SharpMap.Map.numberFormat_EnUS),
+                                bbox.MaxY.ToString(SharpMap.Map.numberFormat_EnUS));
 
             if (iSRID > 0)
                 strBbox = String.Format(SharpMap.Map.numberFormat_EnUS, "SetSRID({0},{1})", strBbox, iSRID);

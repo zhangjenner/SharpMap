@@ -15,16 +15,12 @@
 // along with SqlLiteProvider; if not, write to the Free Software
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-using SharpMap;
-using System.Data.SQLite;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Text;
 using System.Data;
-using SharpMap.Data;
-using SharpMap.Data.Providers;
-using SharpMap.Converters.WellKnownBinary;
+using System.Data.SQLite;
+
+using GeoAPI.Geometries;
 
 namespace SharpMap.Data.Providers
 {
@@ -41,9 +37,9 @@ namespace SharpMap.Data.Providers
 
         #region IProvider Members
 
-        public System.Collections.ObjectModel.Collection<SharpMap.Geometries.Geometry> GetGeometriesInView(SharpMap.Geometries.BoundingBox bbox)
+        public System.Collections.ObjectModel.Collection<IGeometry> GetGeometriesInView(IEnvelope bbox)
         {
-            Collection<Geometries.Geometry> features = new Collection<SharpMap.Geometries.Geometry>();
+            Collection<IGeometry> features = new Collection<IGeometry>();
             using (SQLiteConnection conn = new SQLiteConnection(_ConnectionString))
             {
                 string BoxIntersect = GetBoxClause(bbox);
@@ -63,7 +59,7 @@ namespace SharpMap.Data.Providers
                         {
                             if (dr[0] != DBNull.Value)
                             {
-                                SharpMap.Geometries.Geometry geom = SharpMap.Converters.WellKnownText.GeometryFromWKT.Parse((string)dr[0]);
+                                IGeometry geom = SharpMap.Converters.WellKnownText.GeometryFromWKT.Parse((string)dr[0]);
                                 if (geom != null)
                                     features.Add(geom);
                             }
@@ -75,7 +71,7 @@ namespace SharpMap.Data.Providers
             return features;
         }
 
-        public System.Collections.ObjectModel.Collection<uint> GetObjectIDsInView(SharpMap.Geometries.BoundingBox bbox)
+        public System.Collections.ObjectModel.Collection<uint> GetObjectIDsInView(IEnvelope bbox)
         {
             Collection<uint> objectlist = new Collection<uint>();
             using (SQLiteConnection conn = new SQLiteConnection(_ConnectionString))
@@ -108,9 +104,9 @@ namespace SharpMap.Data.Providers
             return objectlist;
         }
 
-        public SharpMap.Geometries.Geometry GetGeometryByID(uint oid)
+        public IGeometry GetGeometryByID(uint oid)
         {
-            SharpMap.Geometries.Geometry geom = null;
+            IGeometry geom = null;
             using (SQLiteConnection conn = new SQLiteConnection(_ConnectionString))
             {
                 string strSQL = "SELECT " + this.GeometryColumn + " AS Geom FROM " + this.Table + " WHERE " + this.ObjectIdColumn + "='" + oid.ToString() + "'";
@@ -131,12 +127,12 @@ namespace SharpMap.Data.Providers
             return geom;
         }
 
-        public void ExecuteIntersectionQuery(SharpMap.Geometries.Geometry geom, FeatureDataSet ds)
+        public void ExecuteIntersectionQuery(IGeometry geom, FeatureDataSet ds)
         {
             throw new NotImplementedException();
         }
 
-        public void ExecuteIntersectionQuery(SharpMap.Geometries.BoundingBox box, FeatureDataSet ds)
+        public void ExecuteIntersectionQuery(IEnvelope box, FeatureDataSet ds)
         {
             using (SQLiteConnection conn = new SQLiteConnection(_ConnectionString))
             {
@@ -231,9 +227,9 @@ namespace SharpMap.Data.Providers
             }
         }
 
-        public SharpMap.Geometries.BoundingBox GetExtents()
+        public IEnvelope GetExtents()
         {
-            SharpMap.Geometries.BoundingBox box = null;
+            IEnvelope box = null;
             using (SQLiteConnection conn = new SQLiteConnection(_ConnectionString))
             {
                 string strSQL = "SELECT Min(minx) AS MinX, Min(miny) AS MinY, Max(maxx) AS MaxX, Max(maxy) AS MaxY FROM " + this.Table;
@@ -245,7 +241,7 @@ namespace SharpMap.Data.Providers
                     using (SQLiteDataReader dr = command.ExecuteReader())
                         if (dr.Read())
                         {
-                            box = new SharpMap.Geometries.BoundingBox((double)dr[0], (double)dr[1], (double)dr[2], (double)dr[3]);
+                            box = SharpMap.Converters.Geometries.GeometryFactory.CreateEnvelope((double)dr[0], (double)dr[2], (double)dr[1], (double)dr[3]);
                         }
                     conn.Close();
                 }
@@ -365,11 +361,11 @@ namespace SharpMap.Data.Providers
             set { _ObjectIdColumn = value; }
         }
 
-        private string GetBoxClause(SharpMap.Geometries.BoundingBox bbox)
+        private string GetBoxClause(IEnvelope bbox)
         {
             return String.Format(SharpMap.Map.numberFormat_EnUS,
                 "(minx < {0} AND maxx > {1} AND miny < {2} AND maxy > {3})",
-                bbox.Max.X, bbox.Min.X, bbox.Max.Y, bbox.Min.Y);
+                bbox.MaxX, bbox.MinX, bbox.MaxY, bbox.MinY);
         }
 
         private string _defintionQuery;
@@ -492,11 +488,11 @@ namespace SharpMap.Data.Providers
                         System.Console.WriteLine(feature.Geometry.AsBinary().Length.ToString());
                         command.Parameters.AddWithValue("@geom", feature.Geometry.AsText()); //.AsBinary());
                         //command.Parameters["@geom"].Value = "X'" + ToHexString(feature.Geometry.AsBinary()) + "'"; //Add the geometry as Well-Known Binary
-                        SharpMap.Geometries.BoundingBox box = feature.Geometry.GetBoundingBox();
-                        command.Parameters["@minx"].Value = box.Left;
-                        command.Parameters["@miny"].Value = box.Bottom;
-                        command.Parameters["@maxx"].Value = box.Right;
-                        command.Parameters["@maxy"].Value = box.Top;
+                        IEnvelope box = feature.Geometry.EnvelopeInternal;
+                        command.Parameters["@minx"].Value = box.MinX;
+                        command.Parameters["@miny"].Value = box.MinY;
+                        command.Parameters["@maxx"].Value = box.MaxX;
+                        command.Parameters["@maxy"].Value = box.MaxY;
                     }
                     else
                     {

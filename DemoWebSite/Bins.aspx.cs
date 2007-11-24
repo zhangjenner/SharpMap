@@ -11,6 +11,9 @@ using System.Web.UI.WebControls.WebParts;
 using System.Web.UI.HtmlControls;
 using SharpMap.Rendering.Thematics;
 
+using GeoAPI.Geometries;
+using SharpMap.Converters.Geometries;
+
 public partial class Bins : System.Web.UI.Page
 {
 	private SharpMap.Map myMap;
@@ -46,8 +49,8 @@ public partial class Bins : System.Web.UI.Page
 			return style;
 		}
 		// If geometry is a (multi)polygon and the area of the polygon is less than 30, make it cyan
-		else if (row.Geometry.GetType() == typeof(SharpMap.Geometries.MultiPolygon) && (row.Geometry as SharpMap.Geometries.MultiPolygon).Area < 30 ||
-			row.Geometry.GetType() == typeof(SharpMap.Geometries.Polygon) && (row.Geometry as SharpMap.Geometries.Polygon).Area < 30 )
+		else if (row.Geometry.GetType() == typeof(IMultiPolygon) && (row.Geometry as IMultiPolygon).Area < 30 ||
+			row.Geometry.GetType() == typeof(IPolygon) && (row.Geometry as IPolygon).Area < 30 )
 		{
 			style.Fill = Brushes.Cyan;
 			return style;
@@ -74,14 +77,14 @@ public partial class Bins : System.Web.UI.Page
 		if (Page.IsPostBack) 
 		{
 			//Page is post back. Restore center and zoom-values from viewstate
-			myMap.Center = (SharpMap.Geometries.Point)ViewState["mapCenter"];
+			myMap.Center = (ICoordinate)ViewState["mapCenter"];
 			myMap.Zoom = (double)ViewState["mapZoom"];
 		}
 		else
 		{
 			//This is the initial view of the map. Zoom to the extents of the map:
 			//myMap.ZoomToExtents();
-			myMap.Center = new SharpMap.Geometries.Point(0,0);
+            myMap.Center = GeometryFactory.CreateCoordinate(0, 0);
 			myMap.Zoom = 360;
 			//Create the map
 			GenerateMap();

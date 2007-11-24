@@ -18,6 +18,8 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using GeoAPI.Geometries;
+using SharpMap.Converters.Geometries;
 
 namespace SharpMap.Utilities
 {
@@ -26,16 +28,16 @@ namespace SharpMap.Utilities
 	/// </summary>
 	public class LeastSquaresTransform
 	{
-		private List<SharpMap.Geometries.Point> inputs;
-		private List<SharpMap.Geometries.Point> outputs;
+		private List<IPoint> inputs;
+		private List<IPoint> outputs;
 
 		/// <summary>
 		/// Initialize Least Squares transformations
 		/// </summary>
 		public LeastSquaresTransform() 
 		{
-			inputs = new List<SharpMap.Geometries.Point>();
-			outputs = new List<SharpMap.Geometries.Point>();
+			inputs = new List<IPoint>();
+			outputs = new List<IPoint>();
 		}
 
 		/// <summary>
@@ -43,7 +45,7 @@ namespace SharpMap.Utilities
 		/// </summary>
 		/// <param name="input"></param>
 		/// <param name="output"></param>
-		public void AddInputOutputPoint(SharpMap.Geometries.Point input, SharpMap.Geometries.Point output)
+		public void AddInputOutputPoint(IPoint input, IPoint output)
 		{
 			inputs.Add(input);
 			outputs.Add(output);
@@ -64,7 +66,7 @@ namespace SharpMap.Utilities
 		/// </summary>
 		/// <param name="i">index</param>
 		/// <returns>Input point value a index 'i'</returns>
-		public SharpMap.Geometries.Point GetInputPoint(int i)
+		public IPoint GetInputPoint(int i)
 		{
 			return inputs[i];
 		}
@@ -74,7 +76,7 @@ namespace SharpMap.Utilities
 		/// </summary>
 		/// <param name="p">Point value</param>
 		/// <param name="i">index</param>
-		public void SetInputPointAt(SharpMap.Geometries.Point p, int i)
+		public void SetInputPointAt(IPoint p, int i)
 		{
 			inputs[i] = p;
 		}
@@ -84,7 +86,7 @@ namespace SharpMap.Utilities
 		/// </summary>
 		/// <param name="i">index</param>
 		/// <returns>Output point value a index 'i'</returns>
-		public SharpMap.Geometries.Point GetOutputPoint(int i)
+		public IPoint GetOutputPoint(int i)
 		{
 			return outputs[i];
 		}
@@ -94,7 +96,7 @@ namespace SharpMap.Utilities
 		/// </summary>
 		/// <param name="p">Point value</param>
 		/// <param name="i">index</param>
-		public void SetOutputPointAt(SharpMap.Geometries.Point p, int i)
+		public void SetOutputPointAt(IPoint p, int i)
 		{
 			outputs[i] = p;
 		}
@@ -122,8 +124,8 @@ namespace SharpMap.Utilities
 			//double precision isn't always enough when transforming large numbers.
 			//Lets subtract some mean values and add them later again:
 			//Find approximate center values:
-			SharpMap.Geometries.Point meanInput = new SharpMap.Geometries.Point(0, 0);
-			SharpMap.Geometries.Point meanOutput = new SharpMap.Geometries.Point(0, 0);
+			IPoint meanInput = GeometryFactory.CreatePoint(0, 0);
+			IPoint meanOutput = GeometryFactory.CreatePoint(0, 0);
 			for (int i = 0; i < inputs.Count; i++) 
 			{
 				meanInput.X += inputs[i].X;
@@ -224,8 +226,8 @@ namespace SharpMap.Utilities
 
 			//double precision isn't always enough. Lets subtract some mean values and add them later again:
 			//Find approximate center values:
-			SharpMap.Geometries.Point meanInput = new SharpMap.Geometries.Point(0, 0);
-			SharpMap.Geometries.Point meanOutput = new SharpMap.Geometries.Point(0, 0);
+			IPoint meanInput = GeometryFactory.CreatePoint(0, 0);
+			IPoint meanOutput = GeometryFactory.CreatePoint(0, 0);
 			for (int i = 0; i < inputs.Count; i++) 
 			{
 				meanInput.X += inputs[i].X;

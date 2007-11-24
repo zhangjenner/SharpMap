@@ -34,7 +34,19 @@
     <DocumentationFile>bin\Release\SharpMap.XML</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ProjNET, Version=1.0.2794.16965, Culture=neutral, PublicKeyToken=a1f5bdcd9c6f5740, processorArchitecture=MSIL">
+    <Reference Include="GeoAPI">
+      <HintPath>..\..\..\NTS_1.7.3_RC2_BIN\GeoAPI.dll</HintPath>
+      <SpecificVersion>False</SpecificVersion>
+    </Reference>
+    <Reference Include="GeoAPI, Version=1.1.0.0, Culture=neutral, PublicKeyToken=a1a0da7def465678, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\ExternalReferences\GeoAPI.dll</HintPath>
+    </Reference>
+    <Reference Include="NetTopologySuite, Version=1.7.3.16791, Culture=neutral, PublicKeyToken=f580a05016ebada1, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\ExternalReferences\NetTopologySuite.dll</HintPath>
+    </Reference>
+    <Reference Include="ProjNET, Version=1.1.2854.24700, Culture=neutral, PublicKeyToken=a1f5bdcd9c6f5740, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\ExternalReferences\ProjNET.dll</HintPath>
     </Reference>
@@ -45,6 +57,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Converters\Geometries\GeometryFactory.cs" />
     <Compile Include="Converters\WellKnownBinary\GeometryFromWKB.cs" />
     <Compile Include="Converters\WellKnownBinary\GeometryToWKB.cs" />
     <Compile Include="Converters\WellKnownBinary\WKBByteOrder.cs" />
@@ -68,26 +81,6 @@
     <Compile Include="Data\Providers\Pooling\Connector.cs" />
     <Compile Include="Data\Providers\Pooling\ConnectorPool.cs" />
     <Compile Include="Data\Providers\ShapeFile.cs" />
-    <Compile Include="Geometries\BoundingBox.cs" />
-    <Compile Include="Geometries\Curve.cs" />
-    <Compile Include="Geometries\Geometry.cs" />
-    <Compile Include="Geometries\GeometryCollection.cs" />
-    <Compile Include="Geometries\GeometryType.cs" />
-    <Compile Include="Geometries\IGeometry.cs" />
-    <Compile Include="Geometries\IGeometryCollection.cs" />
-    <Compile Include="Geometries\ISpatialReference.cs" />
-    <Compile Include="Geometries\LinearRing.cs" />
-    <Compile Include="Geometries\LineString.cs" />
-    <Compile Include="Geometries\MultiCurve.cs" />
-    <Compile Include="Geometries\MultiLineString.cs" />
-    <Compile Include="Geometries\MultiPoint.cs" />
-    <Compile Include="Geometries\MultiPolygon.cs" />
-    <Compile Include="Geometries\MultiSurface.cs" />
-    <Compile Include="Geometries\Point.cs" />
-    <Compile Include="Geometries\Point3D.cs" />
-    <Compile Include="Geometries\Polygon.cs" />
-    <Compile Include="Geometries\SpatialRelations.cs" />
-    <Compile Include="Geometries\Surface.cs" />
     <Compile Include="Layers\DuplicateLayerException.cs" />
     <Compile Include="Layers\iLayer.cs" />
     <Compile Include="Layers\LabelLayer.cs" />

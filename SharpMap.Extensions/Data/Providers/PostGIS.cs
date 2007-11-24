@@ -22,6 +22,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Text;
+using GeoAPI.Geometries;
 
 namespace SharpMap.Data.Providers
 {
@@ -176,16 +177,16 @@ namespace SharpMap.Data.Providers
 		/// </summary>
 		/// <param name="bbox"></param>
 		/// <returns></returns>
-		public Collection<Geometries.Geometry> GetGeometriesInView(SharpMap.Geometries.BoundingBox bbox)
+		public Collection<IGeometry> GetGeometriesInView(IEnvelope bbox)
 		{
-			Collection<Geometries.Geometry> features = new Collection<SharpMap.Geometries.Geometry>();
+			Collection<IGeometry> features = new Collection<IGeometry>();
 			using (Npgsql.NpgsqlConnection conn = new Npgsql.NpgsqlConnection(_ConnectionString))
 			{
 				string strBbox = "box2d('BOX3D(" +
-							bbox.Min.X.ToString(SharpMap.Map.numberFormat_EnUS) + " " +
-							bbox.Min.Y.ToString(SharpMap.Map.numberFormat_EnUS) + "," +
-							bbox.Max.X.ToString(SharpMap.Map.numberFormat_EnUS) + " " +
-							bbox.Max.Y.ToString(SharpMap.Map.numberFormat_EnUS) + ")'::box3d)";
+							bbox.MinX.ToString(SharpMap.Map.numberFormat_EnUS) + " " +
+							bbox.MinY.ToString(SharpMap.Map.numberFormat_EnUS) + "," +
+							bbox.MaxX.ToString(SharpMap.Map.numberFormat_EnUS) + " " +
+							bbox.MaxY.ToString(SharpMap.Map.numberFormat_EnUS) + ")'::box3d)";
 				if (this.SRID > 0)
 					strBbox = "setSRID(" + strBbox + "," + this.SRID.ToString(Map.numberFormat_EnUS) + ")";
 
@@ -206,7 +207,7 @@ namespace SharpMap.Data.Providers
 						{
 							if (dr[0] != DBNull.Value)
 							{
-								SharpMap.Geometries.Geometry geom = SharpMap.Converters.WellKnownBinary.GeometryFromWKB.Parse((byte[])dr[0]);
+								IGeometry geom = SharpMap.Converters.WellKnownBinary.GeometryFromWKB.Parse((byte[])dr[0]);
 								if(geom!=null)
 									features.Add(geom);
 							}
@@ -223,9 +224,9 @@ namespace SharpMap.Data.Providers
 		/// </summary>
 		/// <param name="oid">Object ID</param>
 		/// <returns>geometry</returns>
-		public SharpMap.Geometries.Geometry GetGeometryByID(uint oid)
+		public IGeometry GetGeometryByID(uint oid)
 		{
-			SharpMap.Geometries.Geometry geom = null;
+			IGeometry geom = null;
 			using (Npgsql.NpgsqlConnection conn = new Npgsql.NpgsqlConnection(_ConnectionString))
 			{
 				string strSQL = "SELECT AsBinary(" + this.GeometryColumn + ") AS Geom FROM " + this.Table + " WHERE " + this.ObjectIdColumn + "='" + oid.ToString() + "'";
@@ -250,16 +251,16 @@ namespace SharpMap.Data.Providers
 		/// </summary>
 		/// <param name="bbox"></param>
 		/// <returns></returns>
-		public Collection<uint> GetObjectIDsInView(SharpMap.Geometries.BoundingBox bbox)
+		public Collection<uint> GetObjectIDsInView(IEnvelope bbox)
 		{
 			Collection<uint> objectlist = new Collection<uint>();
 			using (Npgsql.NpgsqlConnection conn = new Npgsql.NpgsqlConnection(_ConnectionString))
 			{
 				string strBbox = "box2d('BOX3D(" +
-							bbox.Min.X.ToString(SharpMap.Map.numberFormat_EnUS) + " " +
-							bbox.Min.Y.ToString(SharpMap.Map.numberFormat_EnUS) + "," +
-							bbox.Max.X.ToString(SharpMap.Map.numberFormat_EnUS) + " " +
-							bbox.Max.Y.ToString(SharpMap.Map.numberFormat_EnUS) + ")'::box3d)";
+							bbox.MinX.ToString(SharpMap.Map.numberFormat_EnUS) + " " +
+							bbox.MinY.ToString(SharpMap.Map.numberFormat_EnUS) + "," +
+							bbox.MaxX.ToString(SharpMap.Map.numberFormat_EnUS) + " " +
+							bbox.MaxY.ToString(SharpMap.Map.numberFormat_EnUS) + ")'::box3d)";
 				if (this.SRID > 0)
 					strBbox = "setSRID(" + strBbox + "," + this.SRID.ToString(Map.numberFormat_EnUS) + ")";
 
@@ -298,9 +299,9 @@ namespace SharpMap.Data.Providers
 		/// <param name="distance"></param>
 		/// <returns></returns>
 		[Obsolete("Use ExecuteIntersectionQuery instead")]
-		public SharpMap.Data.FeatureDataTable QueryFeatures(SharpMap.Geometries.Geometry geom, double distance)
+		public SharpMap.Data.FeatureDataTable QueryFeatures(IGeometry geom, double distance)
 		{
-			//Collection<Geometries.Geometry> features = new Collection<SharpMap.Geometries.Geometry>();
+			//Collection<IGeometry> features = new Collection<IGeometry>();
 			using (Npgsql.NpgsqlConnection conn = new Npgsql.NpgsqlConnection(_ConnectionString))
 			{
 				string strGeom = "GeomFromText('" + geom.AsText() + "')";
@@ -348,9 +349,9 @@ namespace SharpMap.Data.Providers
 		/// </summary>
 		/// <param name="geom"></param>
 		/// <param name="ds">FeatureDataSet to fill data into</param>
-		public void ExecuteIntersectionQuery(SharpMap.Geometries.Geometry geom, FeatureDataSet ds)
+		public void ExecuteIntersectionQuery(IGeometry geom, FeatureDataSet ds)
 		{
-			List<Geometries.Geometry> features = new List<SharpMap.Geometries.Geometry>();
+			List<IGeometry> features = new List<IGeometry>();
 			using (Npgsql.NpgsqlConnection conn = new Npgsql.NpgsqlConnection(_ConnectionString))
 			{
 				string strGeom = "GeomFromText('" + geom.AsText() + "')";
@@ -395,17 +396,9 @@ namespace SharpMap.Data.Providers
 		/// </summary>
 		/// <param name="WKT"></param>
 		/// <returns></returns>
-		private SharpMap.Geometries.LineString WktToLineString(string WKT)
+		private ILineString WktToLineString(string WKT)
 		{
-			SharpMap.Geometries.LineString line = new SharpMap.Geometries.LineString();
-			WKT = WKT.Substring(WKT.LastIndexOf('(') + 1).Split(')')[0];
-			string[] strPoints = WKT.Split(',');
-			foreach (string strPoint in strPoints)
-			{
-				string[] coord = strPoint.Split(' ');
-				line.Vertices.Add(new SharpMap.Geometries.Point(double.Parse(coord[0], SharpMap.Map.numberFormat_EnUS), double.Parse(coord[1], SharpMap.Map.numberFormat_EnUS)));
-			}
-			return line;
+			return (SharpMap.Converters.WellKnownText.GeometryFromWKT.Parse(WKT) as ILineString);
 		}
 
 		/// <summary>
@@ -480,7 +473,7 @@ namespace SharpMap.Data.Providers
 				//                        col.DataType = typeof(bool);
 				//                        break;
 				//                    case "geometry":
-				//                        col.DataType = typeof(SharpMap.Geometries.Geometry);
+				//                        col.DataType = typeof(IGeometry);
 				//                        break;
 				//                    default:
 				//                        col.DataType = typeof(object);
@@ -607,7 +600,7 @@ namespace SharpMap.Data.Providers
 		/// Boundingbox of dataset
 		/// </summary>
 		/// <returns>boundingbox</returns>
-		public SharpMap.Geometries.BoundingBox GetExtents()
+		public IEnvelope GetExtents()
 		{
 			using (Npgsql.NpgsqlConnection conn = new Npgsql.NpgsqlConnection(_ConnectionString))
 			{
@@ -625,10 +618,10 @@ namespace SharpMap.Data.Providers
 					if (strBox.StartsWith("BOX("))
 					{
 						string[] vals = strBox.Substring(4, strBox.IndexOf(")")-4).Split(new char[2] { ',', ' ' });
-						return new SharpMap.Geometries.BoundingBox(
+						return SharpMap.Converters.Geometries.GeometryFactory.CreateEnvelope(
 							double.Parse(vals[0], SharpMap.Map.numberFormat_EnUS),
-							double.Parse(vals[1], SharpMap.Map.numberFormat_EnUS),
 							double.Parse(vals[2], SharpMap.Map.numberFormat_EnUS),
+                            double.Parse(vals[1], SharpMap.Map.numberFormat_EnUS),
 							double.Parse(vals[3], SharpMap.Map.numberFormat_EnUS));
 					}
 					else
@@ -655,7 +648,7 @@ namespace SharpMap.Data.Providers
 		/// <param name="bbox">view box</param>
 		/// <param name="ds">FeatureDataSet to fill data into</param>
 		[Obsolete("Use ExecuteIntersectionQuery")]
-		public void GetFeaturesInView(SharpMap.Geometries.BoundingBox bbox, SharpMap.Data.FeatureDataSet ds)
+		public void GetFeaturesInView(IEnvelope bbox, SharpMap.Data.FeatureDataSet ds)
 		{
 			ExecuteIntersectionQuery(bbox, ds);
 		}
@@ -665,16 +658,16 @@ namespace SharpMap.Data.Providers
 		/// </summary>
 		/// <param name="bbox">view box</param>
 		/// <param name="ds">FeatureDataSet to fill data into</param>
-		public void ExecuteIntersectionQuery(SharpMap.Geometries.BoundingBox bbox, SharpMap.Data.FeatureDataSet ds)
+		public void ExecuteIntersectionQuery(IEnvelope bbox, SharpMap.Data.FeatureDataSet ds)
 		{
-			List<Geometries.Geometry> features = new List<SharpMap.Geometries.Geometry>();
+			List<IGeometry> features = new List<IGeometry>();
 			using (Npgsql.NpgsqlConnection conn = new Npgsql.NpgsqlConnection(_ConnectionString))
 			{
 				string strBbox = "box2d('BOX3D(" +
-							bbox.Min.X.ToString(SharpMap.Map.numberFormat_EnUS) + " " +
-							bbox.Min.Y.ToString(SharpMap.Map.numberFormat_EnUS) + "," +
-							bbox.Max.X.ToString(SharpMap.Map.numberFormat_EnUS) + " " +
-							bbox.Max.Y.ToString(SharpMap.Map.numberFormat_EnUS) + ")'::box3d)";
+							bbox.MinX.ToString(SharpMap.Map.numberFormat_EnUS) + " " +
+							bbox.MinY.ToString(SharpMap.Map.numberFormat_EnUS) + "," +
+							bbox.MaxX.ToString(SharpMap.Map.numberFormat_EnUS) + " " +
+							bbox.MaxY.ToString(SharpMap.Map.numberFormat_EnUS) + ")'::box3d)";
 				if (this.SRID > 0)
 					strBbox = "setSRID(" + strBbox + "," + this.SRID.ToString(Map.numberFormat_EnUS) + ")";
 

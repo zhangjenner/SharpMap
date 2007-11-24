@@ -18,6 +18,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using GeoAPI.Geometries;
 
 namespace SharpMap.Layers
 {
@@ -246,7 +247,7 @@ namespace SharpMap.Layers
 				g.TextRenderingHint = this.TextRenderingHint;
 				g.SmoothingMode = this.SmoothingMode;
 
-				SharpMap.Geometries.BoundingBox envelope = map.Envelope; //View to render
+				IEnvelope envelope = map.Envelope; //View to render
 				if (this.CoordinateTransformation != null)
 					envelope = SharpMap.CoordinateSystems.Transformations.GeometryTransform.TransformBox(envelope, this.CoordinateTransformation.MathTransform.Inverse());
 			
@@ -290,11 +291,11 @@ namespace SharpMap.Layers
 
 					if (text != null && text != String.Empty)
 					{
-						if (feature.Geometry is SharpMap.Geometries.GeometryCollection)
+						if (feature.Geometry is IGeometryCollection)
 						{
 							if (this.MultipartGeometryBehaviour == MultipartGeometryBehaviourEnum.All)
 							{
-								foreach (SharpMap.Geometries.Geometry geom in (feature.Geometry as Geometries.GeometryCollection))
+								foreach (IGeometry geom in (feature.Geometry as IGeometryCollection))
 								{
 									SharpMap.Rendering.Label lbl = CreateLabel(geom, text, rotation, style, map, g);
 									if (lbl != null)
@@ -309,46 +310,46 @@ namespace SharpMap.Layers
 							}
 							else if (this.MultipartGeometryBehaviour == MultipartGeometryBehaviourEnum.First)
 							{
-								if ((feature.Geometry as Geometries.GeometryCollection).Collection.Count > 0)
+								if ((feature.Geometry as IGeometryCollection).Geometries.Length > 0)
 								{
-									SharpMap.Rendering.Label lbl = CreateLabel((feature.Geometry as Geometries.GeometryCollection).Collection[0], text, rotation, style, map, g);
+									SharpMap.Rendering.Label lbl = CreateLabel((feature.Geometry as IGeometryCollection).Geometries[0], text, rotation, style, map, g);
 									if (lbl != null)
 										labels.Add(lbl);
 								}
 							}
 							else if (this.MultipartGeometryBehaviour == MultipartGeometryBehaviourEnum.Largest)
 							{
-								Geometries.GeometryCollection coll = (feature.Geometry as Geometries.GeometryCollection);
+								IGeometryCollection coll = (feature.Geometry as IGeometryCollection);
 								if (coll.NumGeometries > 0)
 								{
 									double largestVal = 0;
 									int idxOfLargest = 0;
 									for (int j = 0; j < coll.NumGeometries; j++)
 									{
-										SharpMap.Geometries.Geometry geom = coll.Geometry(j);
-										if (geom is Geometries.LineString && ((Geometries.LineString)geom).Length > largestVal)
+										IGeometry geom = coll.Geometries[j];
+										if (geom is ILineString && ((ILineString)geom).Length > largestVal)
 										{
-											largestVal = ((Geometries.LineString)geom).Length;
+											largestVal = ((ILineString)geom).Length;
 											idxOfLargest = j;
 										}
-										if (geom is Geometries.MultiLineString && ((Geometries.MultiLineString)geom).Length > largestVal)
+										if (geom is IMultiLineString && ((IMultiLineString)geom).Length > largestVal)
 										{
-											largestVal = ((Geometries.LineString)geom).Length;
+											largestVal = ((ILineString)geom).Length;
 											idxOfLargest = j;
 										}
-										if (geom is Geometries.Polygon && ((Geometries.Polygon)geom).Area > largestVal)
+										if (geom is IPolygon && ((IPolygon)geom).Area > largestVal)
 										{
-											largestVal = ((Geometries.Polygon)geom).Area;
+											largestVal = ((IPolygon)geom).Area;
 											idxOfLargest = j;
 										}
-										if (geom is Geometries.MultiPolygon && ((Geometries.MultiPolygon)geom).Area > largestVal)
+										if (geom is IMultiPolygon && ((IMultiPolygon)geom).Area > largestVal)
 										{
-											largestVal = ((Geometries.MultiPolygon)geom).Area;
+											largestVal = ((IMultiPolygon)geom).Area;
 											idxOfLargest = j;
 										}
 									}
 
-									SharpMap.Rendering.Label lbl = CreateLabel(coll.Geometry(idxOfLargest), text, rotation, style, map, g);
+									SharpMap.Rendering.Label lbl = CreateLabel(coll.Geometries[idxOfLargest], text, rotation, style, map, g);
 									if (lbl != null)
 										labels.Add(lbl);
 								}
@@ -374,11 +375,11 @@ namespace SharpMap.Layers
 			base.Render(g, map);
 		}
 		
-		private SharpMap.Rendering.Label CreateLabel(SharpMap.Geometries.Geometry feature,string text, float rotation, SharpMap.Styles.LabelStyle style, Map map, System.Drawing.Graphics g)
+		private SharpMap.Rendering.Label CreateLabel(IGeometry feature,string text, float rotation, SharpMap.Styles.LabelStyle style, Map map, System.Drawing.Graphics g)
 		{
 			System.Drawing.SizeF size = g.MeasureString(text, style.Font);
 			
-			System.Drawing.PointF position = map.WorldToImage(feature.GetBoundingBox().GetCentroid());
+			System.Drawing.PointF position = map.WorldToImage(feature.EnvelopeInternal.Centre);
 			position.X = position.X - size.Width * (short)style.HorizontalAlignment * 0.5f;
 			position.Y = position.Y - size.Height * (short)style.VerticalAlignment * 0.5f;
 			if (position.X-size.Width > map.Size.Width || position.X+size.Width < 0 ||
@@ -397,9 +398,9 @@ namespace SharpMap.Layers
 						new SharpMap.Rendering.LabelBox(position.X - size.Width * 0.5f - style.CollisionBuffer.Width, position.Y + size.Height * 0.5f + style.CollisionBuffer.Height,
 						size.Width + 2f * style.CollisionBuffer.Width, size.Height + style.CollisionBuffer.Height * 2f), style);
 				}
-				if (feature.GetType() == typeof(SharpMap.Geometries.LineString))
+				if (feature.GetType() == typeof(ILineString))
 				{
-					SharpMap.Geometries.LineString line = feature as SharpMap.Geometries.LineString;
+					ILineString line = feature as ILineString;
 					if (line.Length / map.PixelSize > size.Width) //Only label feature if it is long enough
 						CalculateLabelOnLinestring(line, ref lbl, map);
 					else
@@ -410,24 +411,24 @@ namespace SharpMap.Layers
 			}
 		}
 
-		private void CalculateLabelOnLinestring(SharpMap.Geometries.LineString line, ref SharpMap.Rendering.Label label, Map map)
+		private void CalculateLabelOnLinestring(ILineString line, ref SharpMap.Rendering.Label label, Map map)
 		{
 			double dx, dy;
 			double tmpx, tmpy;
 			double angle = 0.0;
 
 			// first find the middle segment of the line
-			int midPoint = (line.Vertices.Count - 1) / 2;
-			if (line.Vertices.Count > 2)
+			int midPoint = (line.Coordinates.Length - 1) / 2;
+			if (line.Coordinates.Length > 2)
 			{
-				dx = line.Vertices[midPoint + 1].X - line.Vertices[midPoint].X;
-				dy = line.Vertices[midPoint + 1].Y - line.Vertices[midPoint].Y;
+				dx = line.Coordinates[midPoint + 1].X - line.Coordinates[midPoint].X;
+				dy = line.Coordinates[midPoint + 1].Y - line.Coordinates[midPoint].Y;
 			}
 			else
 			{
 				midPoint = 0;
-				dx = line.Vertices[1].X - line.Vertices[0].X;
-				dy = line.Vertices[1].Y - line.Vertices[0].Y;
+				dx = line.Coordinates[1].X - line.Coordinates[0].X;
+				dy = line.Coordinates[1].Y - line.Coordinates[0].Y;
 			}
 			if (dy == 0)
 				label.Rotation = 0;
@@ -440,15 +441,15 @@ namespace SharpMap.Layers
 				angle *= (180d / Math.PI); // convert radians to degrees
 				label.Rotation = (float)angle - 90; // -90 text orientation
 			}
-			tmpx = line.Vertices[midPoint].X + (dx * 0.5);
-			tmpy = line.Vertices[midPoint].Y + (dy * 0.5);
-			label.LabelPoint = map.WorldToImage(new SharpMap.Geometries.Point(tmpx, tmpy));
+			tmpx = line.Coordinates[midPoint].X + (dx * 0.5);
+			tmpy = line.Coordinates[midPoint].Y + (dy * 0.5);
+			label.LabelPoint = map.WorldToImage(SharpMap.Converters.Geometries.GeometryFactory.CreateCoordinate(tmpx, tmpy));
 		}
 		
 		/// <summary>
 		/// Gets the boundingbox of the entire layer
 		/// </summary>
-		public override SharpMap.Geometries.BoundingBox Envelope
+		public override IEnvelope Envelope
 		{
 			get {
 				if (this.DataSource == null)
@@ -457,7 +458,7 @@ namespace SharpMap.Layers
 				bool wasOpen = this.DataSource.IsOpen;
 				if (!wasOpen)
 					this.DataSource.Open();
-				SharpMap.Geometries.BoundingBox box = this.DataSource.GetExtents();
+				IEnvelope box = this.DataSource.GetExtents();
 				if (!wasOpen) //Restore state
 					this.DataSource.Close();
 				return box;
